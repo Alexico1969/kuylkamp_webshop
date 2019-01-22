@@ -53,17 +53,29 @@ def addTicketType():
         actie = request.form.get("action")[:3]
 
         if actie == "Add":
-            T_name = request.form.get("Ticketname")
+            bericht = ""
+            T_name = request.form.get("TicketName")
             T_price = request.form.get("TicketPrice")
-            if T_name != None and T_name != "" and T_price > 0 and T_price !=None:
+
+            if T_name == None:
+                bericht = "geen ticketnaam ingevoerd"
+
+            if T_name == "":
+                bericht = "ticketnaam niet ingevoerd"
+
+            if T_price == None:
+                bericht = "geen ticketprijs ingevoerd"
+
+            if T_price == "" or T_price == 0:
+                bericht = "ticketprijs niet ingevoerd"
+
+            if bericht == "":
                 bericht = " added record "
                 TicketName =  request.form.get("TicketName")
                 TicketPrice = float(request.form.get("TicketPrice"))
 
                 c.execute("INSERT INTO OfferedTickets (TicketName, TicketPrice) values (%s, %s)",(TicketName, TicketPrice))
                 db.commit()
-            else:
-                bericht = "Fout in Ticketnaam of Ticketprijs"
 
         if actie == "Del":
             record = request.form.get("action")
@@ -71,6 +83,8 @@ def addTicketType():
             bericht = "Deleted record "+ str(record)
 
             c.execute("DELETE FROM OfferedTickets WHERE TicketTypeID = %s " % record)
+            db.commit()
+            c.execute("SELECT * FROM OfferedTickets")
             db.commit()
 
 
