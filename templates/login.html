@@ -1,0 +1,38 @@
+<html>
+    <head>
+        <style>
+            #login_form{
+                background-color: lightblue;
+                text-align: center;
+                font-family: Verdana, Arial;
+                font-size:22;
+            }
+
+            input{
+                font-family: Verdana, Arial;
+                font-size:22;
+            }
+
+        </style>
+
+    </head>
+    <body>
+        <br/><br/><br/>
+        <div id="login_form">
+            <br/>
+            <h3>Login</h3>
+            <table>
+                <form action="/login" method="POST">
+                    <tr>Username: <input class="inputform" name="username" type="text" placeholder="username" required/><br/></tr>
+                    <tr>Password: <input class="inputform" name="password" type="password" required/><br/></tr>
+                    <br/>
+                    <input class="inputform" type="submit"/>
+
+
+                </form>
+            </table>
+            <br/>
+
+        </div>
+    </body>
+</html>

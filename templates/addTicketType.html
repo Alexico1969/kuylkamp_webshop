@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block container %}
+    <br/><br/><br/>
+    <div id="main">
+    <h2>Ticket Types</h2>
+    <p></p>
+    <div>
+        <form action="" method="POST">
+            <table align="center">
+                <tr><th>Ticketnaam</th><th>Prijs</th><th></th></tr>
+
+                <tr><td>{{ticketnaam}}</td><td>€{{ticketprijs}}</td></td>
+
+                <tr><td></td><td></td></td> <!-- empty line -->
+
+                <tr><td><input type="text" name="TicketName"/></td>
+                <td>€<input type="number" min="0.5" step="0.5" max="2500" name="TicketPrice" /></td>
+                <td><input type="submit" value="Add"/></td></tr>
+
+
+            </table>
+        </form>
+    </div>
+
+    </div>
+
+
+
+
+{% endblock %}

@@ -12,12 +12,11 @@ app.secret_key = "any random string"
 app.config['SECRET_KEY'] = 'something-secret2'
 
 db = MySQLdb.connect(user= 'kkff', passwd = 'Albion_01', db = 'kkff$tickets', host = 'kkff.mysql.pythonanywhere-services.com')
-
 c = db.cursor()
 
 #---------DATABASE STUFF-----------
-#c.execute("DROP TABLE leerlingen;")
-#c.execute("CREATE TABLE IF NOT EXISTS OfferedTickets( TicketTypeID INT AUTO_INCREMENT, TicketName varchar(255) NOT NULL, TicketPrice FLOAT, PRIMARY KEY(TicketTypeID));")
+#c.execute("DROP TABLE OfferedTickets;")
+#c.execute("CREATE TABLE IF NOT EXISTS OfferedTickets( TicketTypeID INT AUTO_INCREMENT, TicketName TEXT NOT NULL, TicketPrice FLOAT NOT NULL, PRIMARY KEY(TicketTypeID));")
 #conn.commit()
 #c.execute("DROP TABLE beoordelingen;")
 #c.execute("CREATE TABLE IF NOT EXISTS beoordelingen ( beoordeling_id integer PRIMARY KEY , leerling_nr text NOT NULL, VM01 text NOT NULL, VM02 text NOT NULL, VM03 text NOT NULL, pingen text NOT NULL, WAMP text NOT NULL, delen text NOT NULL, PHP text NOT NULL, CSHARP text NOT NULL, rechten text NOT NULL, IP text NOT NULL);")
@@ -42,10 +41,20 @@ def addTicketType():
         session['url'] = url_for('addTicketType')
         return redirect("/login")
 
-    if request.method == 'POST':
-        print('hallo')
+    c.execute("SELECT * FROM OfferedTickets")
+    rows=c.fetchall
 
-    return render_template('addTicketType.html')
+    test="Hallo"
+
+    if request.method == 'POST':
+        TicketName =  request.form.get("TicketName")
+        TicketPrice = float(request.form.get("TicketPrice"))
+
+        c.execute("INSERT INTO OfferedTickets (TicketName, TicketPrice) values (%s, %s)",(TicketName, TicketPrice))
+        db.commit()
+
+
+    return render_template('addTicketType.html',ticketnaam=test, ticketprijs="20")
 
 
 
