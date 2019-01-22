@@ -36,25 +36,33 @@ def addTicketType():
 
     global CurrentUrl
     CurrentUrl = url_for('addTicketType')
+    rows="EMPTY"
+    bericht=" - "
 
     if not(login_required()):
         session['url'] = url_for('addTicketType')
         return redirect("/login")
 
     c.execute("SELECT * FROM OfferedTickets")
-    rows=c.fetchall
 
-    test="Hallo"
+    rows=c.fetchall()
 
     if request.method == 'POST':
-        TicketName =  request.form.get("TicketName")
-        TicketPrice = float(request.form.get("TicketPrice"))
 
-        c.execute("INSERT INTO OfferedTickets (TicketName, TicketPrice) values (%s, %s)",(TicketName, TicketPrice))
-        db.commit()
+        actie = request.form.get("action")[:3]
 
+        if actie == "Add":
+            bericht=" added record "
+            TicketName =  request.form.get("TicketName")
+            TicketPrice = float(request.form.get("TicketPrice"))
 
-    return render_template('addTicketType.html',ticketnaam=test, ticketprijs="20")
+            c.execute("INSERT INTO OfferedTickets (TicketName, TicketPrice) values (%s, %s)",(TicketName, TicketPrice))
+            db.commit()
+
+        if actie == "Del":
+            bericht=" delete record "
+
+    return render_template('addTicketType.html', rows=rows , bericht = bericht)
 
 
 

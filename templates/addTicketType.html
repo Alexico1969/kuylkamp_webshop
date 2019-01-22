@@ -1,26 +1,36 @@
 {% extends 'base.html' %}
 
 {% block container %}
-    <br/><br/><br/>
     <div id="main">
     <h2>Ticket Types</h2>
-    <p></p>
     <div>
         <form action="" method="POST">
             <table align="center">
-                <tr><th>Ticketnaam</th><th>Prijs</th><th></th></tr>
+                <tr><th>Ticketnaam</th><th>Prijs</th><th>Verwijder</th></tr>
 
-                <tr><td>{{ticketnaam}}</td><td>€{{ticketprijs}}</td></td>
+                <tr><td></td><td></td></td> <!-- empty line -->
+
+
+                {% if rows !="EMPTY" %}
+                    {% for row in rows %}
+                        <tr>
+                            <td>{{ row[1] }}</td>
+                            <td>€{{ row[2] }}</td>
+                            <td><input type="submit" name="action" value="Delete record {{ row[0] }}"/></td>
+                        </tr>
+                    {% endfor %}
+                {% endif %}
 
                 <tr><td></td><td></td></td> <!-- empty line -->
 
                 <tr><td><input type="text" name="TicketName"/></td>
                 <td>€<input type="number" min="0.5" step="0.5" max="2500" name="TicketPrice" /></td>
-                <td><input type="submit" value="Add"/></td></tr>
+                <td><input type="submit" name="action" value="Add"/></td></tr>
 
 
             </table>
         </form>
+        <p>bericht : {{bericht}}</p>
     </div>
 
     </div>
