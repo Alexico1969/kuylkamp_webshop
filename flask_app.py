@@ -4,6 +4,7 @@ import sqlite3
 import csv
 import datetime
 import time
+from os import path
 
 # -- Setting up App --
 
@@ -15,14 +16,16 @@ app.config['SECRET_KEY'] = 'something-secret2'
 
 # -- Setting up SQLite database --
 
-conn = sqlite3.connect("kkff")
+ROOT = path.dirname(path.realpath(__file__))
+conn = sqlite3.connect(path.join(ROOT,"kkff.db"))
 c = conn.cursor()
 
 
 
 #---------DATABASE STUFF-----------
 #c.execute("DROP TABLE OfferedTickets;")
-#c.execute("CREATE TABLE IF NOT EXISTS OfferedTickets( TicketTypeID INT AUTO_INCREMENT, TicketName TEXT NOT NULL, TicketPrice FLOAT NOT NULL, PRIMARY KEY(TicketTypeID));")
+#conn.commit()
+#c.execute("CREATE TABLE IF NOT EXISTS OfferedTickets( TicketTypeID INTEGER PRIMARY KEY AUTOINCREMENT, TicketName TEXT NOT NULL, TicketPrice FLOAT NOT NULL);")
 #conn.commit()
 #c.execute("DROP TABLE beoordelingen;")
 #c.execute("CREATE TABLE IF NOT EXISTS beoordelingen ( beoordeling_id integer PRIMARY KEY , leerling_nr text NOT NULL, VM01 text NOT NULL, VM02 text NOT NULL, VM03 text NOT NULL, pingen text NOT NULL, WAMP text NOT NULL, delen text NOT NULL, PHP text NOT NULL, CSHARP text NOT NULL, rechten text NOT NULL, IP text NOT NULL);")
@@ -38,14 +41,14 @@ def main():
     global CurrentUrl
     CurrentUrl = url_for('main')
 
-    #c.execute("SELECT * FROM OfferedTickets")
-    #db.commit()
+    c.execute("SELECT * FROM OfferedTickets")
+    conn.commit()
 
-    #rows=c.fetchall()
+    rows=c.fetchall()
 
-    #return render_template('main.html', rows = rows, message="CurrentUrl = "+CurrentUrl)
+    return render_template('main.html', rows = rows, message="CurrentUrl = "+CurrentUrl)
 
-    return render_template('main.html')
+    #return render_template('main.html')
 
 @app.route('/addTicketType' , methods=["POST","GET"])
 def addTicketType():
@@ -55,19 +58,19 @@ def addTicketType():
     rows="EMPTY"
     bericht=" - "
     rows=[]
-    return render_template('addTicketType.html', rows=rows , bericht = bericht)
 
 
     if not(login_required()):
         session['url'] = url_for('addTicketType')
         return redirect("/login")
 
-'''
-
     c.execute("SELECT * FROM OfferedTickets")
-    db.commit()
+    conn.commit()
 
     rows=c.fetchall()
+    conn.commit()
+
+
 
     if request.method == 'POST':
 
@@ -95,8 +98,8 @@ def addTicketType():
                 TicketName =  request.form.get("TicketName")
                 TicketPrice = float(request.form.get("TicketPrice"))
 
-                c.execute("INSERT INTO OfferedTickets (TicketName, TicketPrice) values (%s, %s)",(TicketName, TicketPrice))
-                db.commit()
+                c.execute("INSERT INTO OfferedTickets (TicketName, TicketPrice) values (?, ?)",(TicketName, TicketPrice))
+                conn.commit()
 
 
         if actie == "Del":
@@ -105,13 +108,13 @@ def addTicketType():
             bericht = "Deleted record "+ str(record)
 
             c.execute("DELETE FROM OfferedTickets WHERE TicketTypeID = %s " % record)
-            db.commit()
+            conn.commit()
             c.execute("SELECT * FROM OfferedTickets")
-            db.commit()
+            conn.commit()
 
-    '''
 
-    #return render_template('addTicketType.html', rows=rows , bericht = bericht)
+
+    return render_template('addTicketType.html', rows=rows , bericht = bericht)
 
 
 
