@@ -3,8 +3,38 @@ from flask import Flask, render_template, request, redirect, session, url_for
 import MySQLdb
 import csv
 import datetime
+import time
+
+#------------------ to fix the "Server gone away" - problem :
+'''
+class DB:
+    conn = None
+
+    def connect(self):
+        self.conn = MySQLdb.connect()
+
+    def query(self, sql):
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
+        except (AttributeError, MySQLdb.OperationalError):
+            self.connect()
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
+        return cursor
+
+db=DB()
 
 
+
+sql = "SELECT * FROM OfferedTickets"
+cur = db.query(sql)
+# wait a long time for the Mysql connection to timeout
+cur = db.query(sql)
+# still works
+
+# ----------------------------------------------------------------
+'''
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
@@ -29,7 +59,13 @@ CurrentUrl = None
 def main():
     global CurrentUrl
     CurrentUrl = url_for('main')
-    return render_template('main.html',message="CurrentUrl = "+CurrentUrl)
+
+    c.execute("SELECT * FROM OfferedTickets")
+    db.commit()
+
+    rows=c.fetchall()
+
+    return render_template('main.html', rows = rows, message="CurrentUrl = "+CurrentUrl)
 
 @app.route('/addTicketType' , methods=["POST","GET"])
 def addTicketType():
@@ -77,6 +113,7 @@ def addTicketType():
                 c.execute("INSERT INTO OfferedTickets (TicketName, TicketPrice) values (%s, %s)",(TicketName, TicketPrice))
                 db.commit()
 
+
         if actie == "Del":
             record = request.form.get("action")
             record = int(record.split()[2]) # splits "Delete 2"
@@ -86,6 +123,7 @@ def addTicketType():
             db.commit()
             c.execute("SELECT * FROM OfferedTickets")
             db.commit()
+
 
 
     return render_template('addTicketType.html', rows=rows , bericht = bericht)
