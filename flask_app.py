@@ -1,48 +1,24 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, redirect, session, url_for
-import MySQLdb
+from flask import Flask, render_template, request, redirect, session, url_for, g
+import sqlite3
 import csv
 import datetime
 import time
 
-#------------------ to fix the "Server gone away" - problem :
-'''
-class DB:
-    conn = None
-
-    def connect(self):
-        self.conn = MySQLdb.connect()
-
-    def query(self, sql):
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(sql)
-        except (AttributeError, MySQLdb.OperationalError):
-            self.connect()
-            cursor = self.conn.cursor()
-            cursor.execute(sql)
-        return cursor
-
-db=DB()
-
-
-
-sql = "SELECT * FROM OfferedTickets"
-cur = db.query(sql)
-# wait a long time for the Mysql connection to timeout
-cur = db.query(sql)
-# still works
-
-# ----------------------------------------------------------------
-'''
+# -- Setting up App --
 
 app = Flask(__name__)
-app.config["DEBUG"] = True
 app.secret_key = "any random string"
 app.config['SECRET_KEY'] = 'something-secret2'
 
-db = MySQLdb.connect(user= 'kkff', passwd = 'Albion_01', db = 'kkff$tickets', host = 'kkff.mysql.pythonanywhere-services.com')
-c = db.cursor()
+
+
+# -- Setting up SQLite database --
+
+conn = sqlite3.connect("kkff")
+c = conn.cursor()
+
+
 
 #---------DATABASE STUFF-----------
 #c.execute("DROP TABLE OfferedTickets;")
@@ -53,6 +29,8 @@ c = db.cursor()
 #conn.commit()
 #----------------------------------
 
+
+
 CurrentUrl = None
 
 @app.route('/')
@@ -60,12 +38,14 @@ def main():
     global CurrentUrl
     CurrentUrl = url_for('main')
 
-    c.execute("SELECT * FROM OfferedTickets")
-    db.commit()
+    #c.execute("SELECT * FROM OfferedTickets")
+    #db.commit()
 
-    rows=c.fetchall()
+    #rows=c.fetchall()
 
-    return render_template('main.html', rows = rows, message="CurrentUrl = "+CurrentUrl)
+    #return render_template('main.html', rows = rows, message="CurrentUrl = "+CurrentUrl)
+
+    return render_template('main.html')
 
 @app.route('/addTicketType' , methods=["POST","GET"])
 def addTicketType():
@@ -74,10 +54,15 @@ def addTicketType():
     CurrentUrl = url_for('addTicketType')
     rows="EMPTY"
     bericht=" - "
+    rows=[]
+    return render_template('addTicketType.html', rows=rows , bericht = bericht)
+
 
     if not(login_required()):
         session['url'] = url_for('addTicketType')
         return redirect("/login")
+
+'''
 
     c.execute("SELECT * FROM OfferedTickets")
     db.commit()
@@ -124,9 +109,9 @@ def addTicketType():
             c.execute("SELECT * FROM OfferedTickets")
             db.commit()
 
+    '''
 
-
-    return render_template('addTicketType.html', rows=rows , bericht = bericht)
+    #return render_template('addTicketType.html', rows=rows , bericht = bericht)
 
 
 
@@ -175,7 +160,9 @@ def logout():
     session['user_id'] = "Not"
     return redirect('/login')
 
-    '''   Check for logged in at start of function :
+'''
+
+   Check for logged in at start of function :
 
         if not(login_required()):
         return redirect("/login")
