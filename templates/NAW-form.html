@@ -1,37 +1,30 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 
-{% block title %}
-    Log In
-{% endblock %}
-
-{% block main %}
+{% block container %}
 
     <BR/>
     <H1>Registratie</H1>
-    <BR/>
-    Vul de informatie in, zodat wij uw tickets toe kunnen sturen en klik op <b>OK</b><BR/>
-    <BR/>
+    <p>Vul de informatie in, zodat wij uw tickets toe kunnen sturen en klik op <b>OK</b><BR/><p>
 
-    <form action="/registreer" method="post">
-        <div class="form-group">
-            <input class="form-control" name="Voornaam" placeholder="Voornaam" type="text" required autofocus/>
-        </div>
-        <div class="form-group">
-            <input class="form-control" name="TV" placeholder="tussenvoegsel" type="text"/>
-        </div>
-        <div class="form-group">
-            <input class="form-control" name="Achternaam" placeholder="Achternaam" type="text" required/>
-        </div>
-        <div class="form-group">
-            <input class="form-control" name="Email" placeholder="emailadres" type="email" required/>
-        </div>
-        <div class="form-group">
-            <input class="form-control" name="TelNr" placeholder="telefoonnummer" type="number" required/>
-        </div>
-        <div class="form-group">
-            <input class="form-control" name="WhereDidYouFindUs" placeholder="Waar hoorde u voor het eerst van het KuylKamp Festival ? " type="text"/>
-        </div>
+    <form action="" method="POST">
+            <p><input name="Voornaam" placeholder="Voornaam" type="text" required autofocus/></p>
+
+            <p><input name="TV" placeholder="tussenvoegsel" type="text"/></p>
+
+            <p><input name="Achternaam" placeholder="Achternaam" type="text" required/></p>
+
+            <p><input name="Email" placeholder="emailadres" type="email" required/></p>
+
+            <p><input name="TelNr" placeholder="tel.nr." type="tel" required/></p>
+
+            <p>Hoe kent u het KuylKamp Festival ?</p>
+            <p>
+                <INPUT TYPE="radio" NAME="WhereDidYouFindUs" VALUE="vrienden"/>Via vrienden / kennissen<BR/>
+                <INPUT TYPE="radio" NAME="WhereDidYouFindUs" VALUE="internet"/>Via internet / Facebook<BR/>
+                <INPUT TYPE="radio" NAME="WhereDidYouFindUs" VALUE="anders"/>Op een andere manier
+            </p>
         <br/>
-        <button class="btn btn-primary" type="submit">OK</button>
+        <p><button class="btn btn-primary" type="submit">OK</button></p>
+        {{bericht}}
     </form>
 {% endblock %}

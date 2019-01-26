@@ -35,6 +35,7 @@ c = conn.cursor()
 #conn.commit()
 #c.execute("CREATE TABLE IF NOT EXISTS TicketOrders( OrderID INTEGER PRIMARY KEY AUTOINCREMENT, ?? , DateTime DATETIME DEFAULT CURRENT_TIMESTAMP, MollieID TEXT NOT NULL);")
 #c.execute("CREATE TABLE IF NOT EXISTS CustomerInfo( CustomerID INTEGER PRIMARY KEY AUTOINCREMENT, Voornaam TEXT NOT NULL , TV TEXT NOT NULL, Achternaam TEXT NOT NULL, Email TEXT NOT NULL, TelNr INT NOT NULL, WhereDidYouFindUs TEXT);")
+#c.execute("INSERT INTO CustomerInfo( Voornaam,TV,Achternaam,Email,TelNr,WhereDidYouFindUs) values (?,?,?,?,?, ?)",("Piet","","Paulusma", "piet@paulusma.nl", 1234567890, ""))
 #conn.commit()
 #----------------------------------
 
@@ -95,10 +96,7 @@ def main():
 @app.route('/addTicketType' , methods=["POST","GET"])
 def addTicketType():
 
-    global CurrentUrl
-    CurrentUrl = url_for('addTicketType')
     bericht=" - "
-    rows=[]
 
     if not(login_required()):
         session['url'] = url_for('addTicketType')
@@ -154,6 +152,23 @@ def addTicketType():
 
     return render_template('addTicketType.html', rows=rows , bericht = bericht)
 
+
+
+@app.route('/showCustomers' , methods=["POST","GET"])
+def showCustomers():
+
+    bericht=" - "
+
+    if not(login_required()):
+        return redirect("/login")
+
+    c.execute("SELECT * FROM CustomerInfo")
+    conn.commit()
+
+    rows=c.fetchall()
+    conn.commit()
+
+    return render_template('showCustomers.html', rows=rows , bericht = bericht)
 
 
 
@@ -272,12 +287,39 @@ def GetOrder(method):
 
 def ConfirmOrder(method):
     global bericht
+    session['orderstatus'] = "Order checked"
     bericht="ConfirmOrder"
     return
 
-def GetCustomerInfo():
+def GetCustomerInfo(method):
     global bericht
-    bericht="GetCustomerInfo"
+    global rows
+
+    if method == "POST":
+        bericht = "POST"
+
+
+        voornaam = request.form["Voornaam"]
+        tv = request.form["TV"]
+        achternaam = request.form["Achternaam"]
+        email = request.form["Email"]
+        tlnr = request.form["TelNr"]  # tussenstap
+        tel = int(tlnr)
+        try:
+            WDYFU = request.form["WhereDidYouFindUs"]
+        except:
+            WDYFU = "?"
+
+        c.execute("INSERT INTO CustomerInfo (Voornaam, TV, Achternaam, Email, TelNr, WhereDidYouFindUs) values (?, ?, ?, ?, ?, ?)",(voornaam, tv, achternaam, email, tel, WDYFU))
+        conn.commit()
+
+        #session['orderstatus'] = "NAW done"
+        return
+
+    if method == "GET":
+        bericht = "GET"
+
+
     return
 
 def InitiatePayment():
