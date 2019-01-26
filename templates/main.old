@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block container %}
+    <div id="main">
+        <h2>kies uw tickets</h2>
+        <br/>
+        <form>
+            <table align = "center">
+                <tr><th  size="30">Ticketnaam</th><th class="align_right"> Prijs</th><th class="align_center" >Aantal</th></tr>
+
+                <tr><td  size="30"></td><td></td><td></td></tr> <!-- empty line -->
+
+                {% if rows !="EMPTY" %}
+                    {% for row in rows %}
+                        <tr>
+                            <td size="30">{{ row[1] }}</td>
+                            <td class="align_right">€{{ row[2] }}0</td>
+                            <td align="center" class="input_large_center"><input align="center" size="14" class="form-control input_large_center" type="number" min= "0" max="20" name="{{row[0]}}" value="" placeholder="0"/></td>
+                            </tr>
+                    {% endfor %}
+                {% endif %}
+
+                {% for row in rows %}
+                    <tr><p>Hallo,</p></tr>
+                {% endfor  %}
+
+                <tr><td size="30"></td><td></td><td><input class="form-control align_center" type="submit" value="bestellen" /></td></tr>
+            </table>
+        </form>
+
+        <p>{{bericht}}</p>
+
+    </div>
+
+    <footer class="footer">
+      <div class="container">
+        <p class="text-muted">(c) 2019 Alexicoo</p>
+      </div>
+    </footer>
+
+
+{% endblock %}
+

@@ -1,4 +1,4 @@
-* {
+h1, h2, h3, p {
     font-family: Helvetica;
     text-align: center;
 }
@@ -12,3 +12,45 @@
     color: white;
     text-align: center;
 }
+
+table, th, td, input {
+    font-size:120%;
+    text-align: left;
+}
+
+.align_left{
+    text-align: left;
+}
+
+.align_right{
+    text-align: right;
+}
+
+.align_center{
+    text-align: center;
+}
+
+.input_large_center{
+    text-align: center;
+    font-size: 120%;
+    width: 50px;
+}
+
+.input_large_center :: placeholder{
+    color: #097AB6;
+    font-size:200%;
+}
+
+input:: placeholder{
+    color: #097AB6;
+    font-size:200%;
+}
+
+input[type=number]{
+    width: 80px;
+}
+
+.max_width{
+    max-width: 200px;
+}
+
