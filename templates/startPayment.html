@@ -2,18 +2,17 @@
 
 {% block container %}
 
-    <?php header( 'Location: https://www.mollie.com/payscreen/select-method/zdufbHhMMW' ) ; ?>
-
     <div id="main">
     <h2>Kies uw betaalmethode</h2>
-    <div>
-        <form align ="center" action="" method="POST">
-            <input align ="center" type="submit" name="action" value="OK"/>
-        </form>
+        <div>
+            <form align ="center" action="" method="POST">
+                <a href="{{bericht}}">Afrekenen</a>
+            </form>
 
-        <p>bericht : {{bericht}}</p>
-    </div>
-
+            <p>bericht : {{bericht}}</p>
+        </div>
     </div>
 
 {% endblock %}
+
+
