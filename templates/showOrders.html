@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block container %}
+    <div id="main">
+    <h2>Table CustomerInfo</h2>
+    <div>
+        <form action="" method="POST">
+            <table align="center" class="table">
+                <tr><th>Totaal €</th><th>Datum - tijd</th><th>CustomerID</th><th>MollieID</th><th>Status</th><th>Del</th></tr>
+
+                <tr><td></td><td></td><td></td></td><td></td><td></td></tr> <!-- empty line -->
+
+
+                {% if rows !="EMPTY" %}
+                    {% for row in rows %}
+                        <tr>
+                            <td>{{ row[1] }}</td>
+                            <td>{{ row[2] }}</td>
+                            <td>{{ row[3] }}</td>
+                            <td>{{ row[4] }}</td>
+                            <td>{{ row[5] }}</td>
+                            <td><input type="submit" name="action" value="Delete record {{ row[0] }}"/></td>
+                        </tr>
+                    {% endfor %}
+                {% endif %}
+            </table>
+        </form>
+        <p>bericht : {{bericht}}</p>
+    </div>
+
+    </div>
+
+
+
+
+{% endblock %}
+
+{% block footer %}
+        &copy; Copyright 2019 by <a href="http://domain.invalid/">you</a>.
+{% endblock %}
