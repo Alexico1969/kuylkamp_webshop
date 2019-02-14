@@ -54,3 +54,12 @@ input[type=number]{
     max-width: 200px;
 }
 
+.redfat{
+    color: #db1b0e;
+    font-weight: bold;
+}
+
+.backpink{
+    background-color: #f8dfda;
+}
+

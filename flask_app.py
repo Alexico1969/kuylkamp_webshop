@@ -5,8 +5,11 @@ import csv
 import datetime
 import time
 import json
+import os
+from helpers import makeTicket
 from os import path
 from MolliePy.mollie.api.client import Client
+from MolliePy.mollie.api.error import Error
 
 # -- Setting up App --
 
@@ -18,7 +21,7 @@ app.config['SECRET_KEY'] = 'something-secret2'
 # -- Setting up Mollie
 
 mollie_client = Client()
-mollie_client.set_api_key('test_UAvAQ84S9PJtxRn3ARQmsy6CE8vu9F')
+mollie_client.set_api_key('test_erGKTV4s4KCCmCnVx328FEWmGFQdxb')
 
 # -- Setting up SQLite database --
 
@@ -26,16 +29,17 @@ ROOT = path.dirname(path.realpath(__file__))
 conn = sqlite3.connect(path.join(ROOT,"kkff.db"))
 c = conn.cursor()
 
+PaymentStarted = False
 
 #---------DATABASE STUFF-----------
-
-#c.execute("DROP TABLE OfferedTickets;")
+#c.execute("DROP TABLE Tickets;")
 #conn.commit()
 #c.execute("CREATE TABLE IF NOT EXISTS OfferedTickets( TicketTypeID INTEGER PRIMARY KEY AUTOINCREMENT, TicketName TEXT NOT NULL, TicketPrice FLOAT NOT NULL);")
 #conn.commit()
-#c.execute("CREATE TABLE IF NOT EXISTS TicketOrders( OrderID INTEGER PRIMARY KEY AUTOINCREMENT, ?? , DateTime DATETIME DEFAULT CURRENT_TIMESTAMP, MollieID TEXT NOT NULL);")
+#c.execute("CREATE TABLE IF NOT EXISTS TicketOrders( OrderID INTEGER PRIMARY KEY AUTOINCREMENT, TotalAmount FLOAT NOT NULL, DateTime DATETIME DEFAULT CURRENT_TIMESTAMP, CustomerID INTEGER NOT NULL, MollieID TEXT NOT NULL , OrderStatus TEXT NOT NULL, Source TEXT NOT NULL, FOREIGN KEY(CustomerID) REFERENCES CustomerInfo(CustomerID));")
 #c.execute("CREATE TABLE IF NOT EXISTS CustomerInfo( CustomerID INTEGER PRIMARY KEY AUTOINCREMENT, Voornaam TEXT NOT NULL , TV TEXT NOT NULL, Achternaam TEXT NOT NULL, Email TEXT NOT NULL, TelNr INT NOT NULL, WhereDidYouFindUs TEXT);")
 #c.execute("INSERT INTO CustomerInfo( Voornaam,TV,Achternaam,Email,TelNr,WhereDidYouFindUs) values (?,?,?,?,?, ?)",("Piet","","Paulusma", "piet@paulusma.nl", 1234567890, ""))
+#c.execute("CREATE TABLE IF NOT EXISTS Tickets( TicketID INTEGER PRIMARY KEY AUTOINCREMENT, TicketNummer TEXT NOT NULL UNIQUE, OrderID INT NOT NULL, TicketTypeID INT NOT NULL, CustomerName TEXT NOT NULL, Scanned BOOLEAN NOT NULL,FOREIGN KEY(OrderID) REFERENCES TicketOrders(OrderID) ,FOREIGN KEY(TicketTypeID) REFERENCES OfferedTickets(TicketTypeID));")
 #conn.commit()
 #----------------------------------
 
@@ -43,6 +47,9 @@ c = conn.cursor()
 bericht = "-"
 order = {}
 totalAmount = 0.0
+source = "Regular"
+
+# ------------ ROUTES ------------------------
 
 @app.route('/', methods=["POST","GET"] )
 def main():
@@ -51,6 +58,9 @@ def main():
     global order
     global totalAmount
     global bericht
+    global PaymentStarted
+
+    rows = {0,0,0}
 
     bericht = "Main - start"
 
@@ -65,20 +75,26 @@ def main():
 
     # mapping the inputs to the function blocks
     options = { "Empty" : GetOrder,
+                 "message" : ShowMessage,
                  "Ordering" : GetOrder,
                  "Order placed" : ConfirmOrder,
                  "Order checked" : GetCustomerInfo,
                  "NAW done" : InitiatePayment,
+                 "Payment open" : InitiatePayment,
+                 "Payment pending" : InitiatePayment,
                  "Payment initiated" : FinishPayment,
                  "Payment done" : GenerateTickets,
                  "Tickets Generated" : SendTickets,
                  "Tickets Sent" : Finished,}
 
     renderPage = { "Empty" : 'main.html',
+                 "message" : 'message.html',
                  "Ordering" : 'main.html',
                  "Order placed" : 'confirmOrder.html',
                  "Order checked" : 'NAW-form.html',
                  "NAW done" : 'startPayment.html',
+                 "Payment open" : 'startPayment.html',
+                 "Payment pending" : 'startPayment.html',
                  "Payment initiated" : 'pendingPayment.html',
                  "Payment done" : 'paymentSuccess.html',
                  "Tickets Generated" : 'ticketsGenerated.html',
@@ -86,8 +102,16 @@ def main():
 
     options[session['orderstatus']](request.method) # this determines which Funcion is called
 
+
     #bericht = session['orderstatus']
     #bericht = rows
+
+    if PaymentStarted:
+        FinishPayment('GET')
+
+    if session['orderstatus'] == 'NAW done':
+        InitiatePayment('GET')
+        PaymentStarted = True
 
     return render_template( renderPage[session['orderstatus']], rows = rows, bericht = bericht, totalAmount = totalAmount )
 
@@ -139,7 +163,6 @@ def addTicketType():
                 c.execute("INSERT INTO OfferedTickets (TicketName, TicketPrice) values (?, ?)",(TicketName, TicketPrice))
                 conn.commit()
 
-
         if actie == "Del":
             record = request.form.get("action")
             record = int(record.split()[2]) # splits "Delete 2"
@@ -168,7 +191,86 @@ def showCustomers():
     rows=c.fetchall()
     conn.commit()
 
+    if request.method == 'POST':
+
+        actie = request.form.get("action")[:3]
+
+        if actie == "Del":
+            record = request.form.get("action")
+            record = int(record.split()[2]) # splits "Delete 2"
+            bericht = "Deleted record "+ str(record)
+
+            c.execute("DELETE FROM CustomerInfo WHERE CustomerID = %s " % record)
+            conn.commit()
+            c.execute("SELECT * FROM CustomerInfo")
+            conn.commit()
+            rows=c.fetchall()
+
     return render_template('showCustomers.html', rows=rows , bericht = bericht)
+
+
+@app.route('/showTickets' , methods=["POST","GET"])
+def showTickets():
+
+    bericht=" - "
+
+    if not(login_required()):
+        return redirect("/login")
+
+    c.execute("SELECT * FROM Tickets")
+    conn.commit()
+
+    rows=c.fetchall()
+    conn.commit()
+
+    if request.method == 'POST':
+
+        actie = request.form.get("action")[:3]
+
+        if actie == "Del":
+            record = request.form.get("action")
+            record = int(record.split()[2]) # splits "Delete 2"
+            bericht = "Deleted record "+ str(record)
+
+            c.execute("DELETE FROM Tickets WHERE TicketID = %s " % record)
+            conn.commit()
+            c.execute("SELECT * FROM Tickets")
+            conn.commit()
+            rows=c.fetchall()
+
+    return render_template('showTickets.html', rows=rows , bericht = bericht)
+
+@app.route('/showOrders' , methods=["POST","GET"])
+def showOrders():
+
+    bericht=" - "
+
+    if not(login_required()):
+        return redirect("/login")
+
+    c.execute("SELECT * FROM TicketOrders")
+    conn.commit()
+
+    rows=c.fetchall()
+    conn.commit()
+
+    if request.method == 'POST':
+
+        actie = request.form.get("action")[:3]
+
+        if actie == "Del":
+            record = request.form.get("action")
+            record = int(record.split()[2]) # splits "Delete 2"
+            bericht = "Deleted record "+ str(record)
+
+            c.execute("DELETE FROM TicketOrders WHERE OrderID = %s " % record)
+            conn.commit()
+            c.execute("SELECT * FROM TicketOrders")
+            conn.commit()
+            rows=c.fetchall()
+
+    return render_template('showOrders.html', rows=rows , bericht = bericht)
+
 
 
 
@@ -231,6 +333,22 @@ def logout():
     session['user_id'] = "Not"
     return redirect('/login')
 
+@app.route('/MollyReturn')
+def MollyReturn():
+    session['user_id'] = "Not"
+    return redirect('/login')
+
+
+@app.route('/admin')
+def admin():
+
+    if not(login_required()):
+        return redirect("/login")
+
+    return render_template('admin.html')
+
+
+
 '''
 
    Check for logged in at start of function :
@@ -250,10 +368,11 @@ def GetOrder(method):
     global bericht
     global rows
     global totalAmount
-    global order
 
     bericht = "GetOrder"
     if method == 'POST':
+
+        order = {}
 
         c.execute("SELECT * FROM OfferedTickets")
         conn.commit()
@@ -270,14 +389,38 @@ def GetOrder(method):
             amountOrdered = request.form[ticketID]
             totalPerTicket = row[2] * float(request.form[ticketID])
             if int(amountOrdered) > 0:
-                bericht+= str(amountOrdered) + " x " + ticketName + " à € " + price  + "0 = € " + str(totalPerTicket) + "0 | "
+                bericht += str(amountOrdered) + " x " + ticketName + " à € " + price  + "0 = € " + str(totalPerTicket) + "0 | "
                 totalAmount += totalPerTicket
+                order[int(ticketID)] = int(amountOrdered)
 
-        session['orderstatus'] = "Order placed"
+
+
+        if totalAmount > 0 :
+
+            #bericht = order #om de order te checken in session['order']
+
+            if login_required():
+                source = "admin"
+            else:
+                source = "customer"
+
+            session['orderstatus'] = "Order placed"
+            session['totalAmount'] = totalAmount
+            session['order'] = order
+            c.execute("INSERT INTO Ticketorders (totalAmount, CustomerID, MollieID, OrderStatus , Source) values (?, ?, ?, ?, ?)",(totalAmount, 999999, "unknown","placed", source))
+            conn.commit()
+            c.execute("SELECT OrderID from Ticketorders WHERE OrderID = (SELECT MAX(OrderID) FROM TicketOrders);")
+            conn.commit()
+            OrderID = c.fetchall()
+            bericht = order
+            session['OrderID'] = int("".join(filter(str.isdigit, str(OrderID[0]))))
+        else:
+            bericht = "Geen tickets geselecteerd"
+            session['orderstatus'] = "message"
         return
 
     else:
-        bericht = "NOT POST"
+        bericht = ""
         c.execute("SELECT * FROM OfferedTickets")
         conn.commit()
         rows = c.fetchall()
@@ -287,13 +430,29 @@ def GetOrder(method):
 
 def ConfirmOrder(method):
     global bericht
-    session['orderstatus'] = "Order checked"
-    bericht="ConfirmOrder"
+    global session
+
+    if method == 'POST':
+        if request.form['confirm'] == 'Annuleren':
+            bericht = "Bedankt voor uw bezoek"
+            session['orderstatus'] = "message"
+            return
+
+        session['orderstatus'] = "Order checked"
+        bericht="ConfirmOrder"
+
+        OrderID = session['OrderID']
+
+        c.execute("UPDATE TicketOrders SET OrderStatus = 'confirmed' WHERE OrderID = %s" % OrderID )
+        conn.commit()
+
+
     return
 
 def GetCustomerInfo(method):
     global bericht
     global rows
+    global session
 
     if method == "POST":
         bericht = "POST"
@@ -305,6 +464,14 @@ def GetCustomerInfo(method):
         email = request.form["Email"]
         tlnr = request.form["TelNr"]  # tussenstap
         tel = int(tlnr)
+
+        Cname = voornaam
+        if tv != "":
+            Cname += " " + tv
+        Cname += " "+achternaam
+
+        session["CustomerName"] = Cname
+
         try:
             WDYFU = request.form["WhereDidYouFindUs"]
         except:
@@ -313,7 +480,14 @@ def GetCustomerInfo(method):
         c.execute("INSERT INTO CustomerInfo (Voornaam, TV, Achternaam, Email, TelNr, WhereDidYouFindUs) values (?, ?, ?, ?, ?, ?)",(voornaam, tv, achternaam, email, tel, WDYFU))
         conn.commit()
 
-        #session['orderstatus'] = "NAW done"
+        session['orderstatus'] = "NAW done"
+
+        c.execute("SELECT CustomerID FROM CustomerInfo WHERE CustomerID = (SELECT MAX(CustomerID) FROM CustomerInfo);")
+        conn.commit()
+        ID = c.fetchall()
+        bericht = str(ID[0])
+        session['CustomerID'] = int("".join(filter(str.isdigit, str(ID[0]))))
+
         return
 
     if method == "GET":
@@ -322,29 +496,166 @@ def GetCustomerInfo(method):
 
     return
 
-def InitiatePayment():
+def InitiatePayment(method):
     global bericht
-    bericht="InitiatePayment"
+    global totalAmount
+    global payment
+    global session
+    global source
+
+    CustomerID = str(session['CustomerID'])
+    totalAmount = str(session['totalAmount'])
+
+    #bericht="InitiatePayment"
 
     payment = mollie_client.payments.create({
         'amount': {
             'currency': 'EUR',
-            'value': '1.00'
+            'value': str(totalAmount)+"0"  # standaard geeft het formulier 10.0 of zo. Dus.. + "0" vanwege Mollie
         },
-        'description': 'My first API payment',
-        'redirectUrl': 'https://kkff.pythonanywhere.com/',
+        'description': 'CustomerID : ' + CustomerID,
+        'redirectUrl': 'https://kkff.pythonanywhere.com/returnFromMollie',
         'webhookUrl': 'https://kkff.pythonanywhere.com//mollie-webhook/', })
 
+    #bericht = str(totalAmount)
+    bericht = payment.checkout_url  # Let op !  Dit wordt in de view (template) verwerkt in een href
+    session['orderstatus'] = "Payment initiated"
+
+    mollieID = ""
+
+    OrderID = session['OrderID']
+    CustomerID = session['CustomerID']
+
+    c.execute("UPDATE TicketOrders SET CustomerID = %s WHERE OrderID = %s" % ( CustomerID , OrderID ))
+    conn.commit()
+
     return
 
-def FinishPayment():
+@app.route('/returnFromMollie' , methods=["POST","GET"])
+def returnFromMollie():
     global bericht
+    global session
+    global totalAmount
+    global payment
+
+    bericht = "Entering FinishPayment"
+    rows = {}
+    FinishPayment('POST')
+
+    try:
+        if session['orderstatus'] != "Payment done" and session['orderstatus'] != "Payment initiated" :
+            bericht = session['orderstatus']
+            return render_template( 'plzDontTry.html', rows = rows, bericht = bericht, totalAmount = totalAmount )
+    except:
+            bericht = "error when trying to get session info"
+            return render_template( 'plzDontTry.html', rows = rows, bericht = bericht, totalAmount = totalAmount )
+
+    OrderID = session['OrderID']
+
+    c.execute("UPDATE Ticketorders SET OrderStatus = 'payed'")
+    conn.commit()
+
+    GenerateTickets('GET')
+
+    return render_template( 'paymentSuccess.html', rows = rows, bericht = bericht, totalAmount = totalAmount )
+
+
+def FinishPayment(method):
+    global bericht
+    global session
     bericht="FinishPayment"
+
+    try:
+        #
+        # Retrieve the payment's current state.
+        #
+        if 'id' not in request.form:
+            bericht = ""
+            return
+
+        payment_id = request.form['id']
+        payment = mollie_client.payments.get(payment_id)
+        my_webshop_id = payment.metadata['my_webshop_id']
+
+        #
+        # Update the order in the database.
+        #
+
+        if payment.is_paid():
+            #
+            # At this point you'd probably want to start the process of delivering the product to the customer.
+            #
+            session['orderstatus'] = "Payment done"
+            bericht - "Payment Successful !"
+            OrderID = session['OrderID']
+            MollieID = my_webshop_id
+            MollieID = "TEST"
+            c.execute("UPDATE TicketOrders SET MollieID = %s WHERE OrderID = %s" % ( MollieID , OrderID ))
+            conn.commit()
+
+        elif payment.is_pending():
+            #
+            # The payment has started but is not complete yet.
+            #
+            session['orderstatus'] = "Payment pending"
+            bericht - "Payment Pending !"
+
+        elif payment.is_open():
+            #
+            # The payment has not started yet. Wait for it.
+            #
+            session['orderstatus'] = "Payment open"
+            bericht - "Payment Open !"
+
+        elif payment.is_cancelled():
+            #
+            # The payment has not started yet. Wait for it.
+            #
+            session['orderstatus'] = "message"
+            bericht - "Payment cancelled"
+
+        else:
+            #
+            # The payment isn't paid, pending nor open. We can assume it was aborted.
+            #
+            session['orderstatus'] = "message"
+            bericht - "Payment crashed"
+
+
+
+    except Error as err:
+        bericht = "API call failed"
+        return
+
+
+    rows = {}
+
+    #return render_template( 'paymentSuccess.html', rows = rows, bericht = "WHAT ?!", totalAmount = totalAmount )
     return
 
-def GenerateTickets():
+def GenerateTickets(method):
     global bericht
+
     bericht="GenerateTickets"
+
+    order = session['order']
+    customerID = session['CustomerID']
+    orderID = session['OrderID']
+
+    CustomerName = session["CustomerName"]
+    counter = 1
+
+    for key in order:
+        for t in range(order[key]):
+            ticketNr = "KKFF2019-" + str(customerID) + "-" + str(orderID) + "-" + str(counter)
+            TicketTypeID = key
+            c.execute("INSERT INTO Tickets (TicketNummer, OrderID, TicketTypeID, CustomerName, Scanned) values (?, ?, ?, ?, ?)",(ticketNr, orderID, TicketTypeID, CustomerName, 'False'))
+            conn.commit()
+            makeTicket(ticketNr, TicketTypeID, CustomerName)
+            counter += 1
+
+
+
     return
 
 def SendTickets():
@@ -355,6 +666,13 @@ def SendTickets():
 def Finished():
     global bericht
     bericht="Finished"
+    return
+
+def ShowMessage(method):
+    global session
+    global bericht
+
+    session['orderstatus'] = 'Empty'
     return
 
 

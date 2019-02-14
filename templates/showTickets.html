@@ -2,11 +2,11 @@
 
 {% block container %}
     <div id="main">
-    <h2>Table <span class="redfat">CustomerInfo</span></h2>
+    <h2>Table <span class="redfat">Tickets</span></h2>
     <div>
         <form action="" method="POST">
             <table align="center" class="table">
-                <tr><th>Voornaam</th><th>tv</th><th>Achternaam</th><th>email</th><th>tel</th><th>HDYFU</th><th>Del</th></tr>
+                <tr><th>Ticketnummer</th><th>OrderID</th><th>TicketTypeID</th><th>CustomerName</th><th>Scanned ?</th><th>Del</th></tr>
 
                 <tr><td></td><td></td><td></td></td><td></td><td></td></tr> <!-- empty line -->
 
@@ -19,7 +19,6 @@
                             <td>{{ row[3] }}</td>
                             <td>{{ row[4] }}</td>
                             <td>{{ row[5] }}</td>
-                            <td>{{ row[6] }}</td>
                             <td><input type="submit" name="action" value="Delete record {{ row[0] }}"/></td>
                         </tr>
                     {% endfor %}
