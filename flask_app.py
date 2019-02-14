@@ -651,7 +651,15 @@ def GenerateTickets(method):
             TicketTypeID = key
             c.execute("INSERT INTO Tickets (TicketNummer, OrderID, TicketTypeID, CustomerName, Scanned) values (?, ?, ?, ?, ?)",(ticketNr, orderID, TicketTypeID, CustomerName, 'False'))
             conn.commit()
-            makeTicket(ticketNr, TicketTypeID, CustomerName)
+
+            c.execute("SELECT TicketID FROM Tickets WHERE TicketID = (SELECT MAX(TicketID) FROM Tickets);")
+            conn.commit()
+            ID = c.fetchall()
+            bericht = str(ID[0])
+            ticketID = int("".join(filter(str.isdigit, str(ID[0]))))
+
+
+            makeTicket(ticketID,ticketNr, TicketTypeID, CustomerName)
             counter += 1
 
 

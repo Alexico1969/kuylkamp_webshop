@@ -3,6 +3,7 @@ import os
 import urllib.request
 import qrcode
 import datetime
+import qrcode
 
 from fpdf import FPDF
 from flask import redirect, render_template, request, session
@@ -10,7 +11,7 @@ from functools import wraps
 
 
 
-def makeTicket(TicketNr, TicketTypeID, Customername):
+def makeTicket(ticketID, TicketNr, TicketTypeID, Customername):
 
     #def create_ticket(klantID, soort, t, klantnaam_volledig):
 
@@ -19,25 +20,26 @@ def makeTicket(TicketNr, TicketTypeID, Customername):
     ks = TicketTypeID
     nummer = TicketNr
 
-    '''
+
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=12, border=4, )
-    #qr.add_data('klantID: '+str(klantID)+' soort: '+str(soort))
-    qr.add_data('http://ide50-alexicoo.cs50.io:8080/scantest?ticketnr=12')
+
+    QR_string = 'http://kkff.pythonanywhere.com/scanTicket?ticketID=' + str(ticketID)
+
+    qr.add_data(QR_string)
     qr.make(fit=True)
 
     img = qr.make_image(fill_color="black", back_color="white")
 
-    #filename_QR = "QR-"+ nummer +".png"
     filename_QR = "QR-temp.png"
 
     img.save(filename_QR)
-    '''
+
 
     # Create PDF
     pdf = PDF()
     pdf.alias_nb_pages()
     pdf.add_page()
-    pdf.set_font('Times', '', 12)
+    pdf.set_font('Arial', '', 12)
     for i in range(1, 3):
         pdf.cell(0, 10, '' , 0, 1)
     pdf.cell(0, 10, 'Dit is uw ticket dat toegang geeft tot het KuylKamp Familiefestival' , 0, 1)
@@ -56,11 +58,11 @@ class PDF(FPDF):
     def header(self):
 
         global ks
-        '''
+
         # Logo
-        self.image('img/LOGO.jpg', 10, 8, 33)
+        self.image('mysite/img/LOGO.jpg', 10, 8, 33)
         self.image('QR-temp.png', 170, 8, 33)
-        '''
+
         # Arial bold 15
         self.set_font('Arial', 'B', 15)
         # Move to the right
