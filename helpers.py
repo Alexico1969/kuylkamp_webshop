@@ -10,14 +10,15 @@ from flask import redirect, render_template, request, session
 from functools import wraps
 
 
+def makeTicket(ticketID, TicketNr, TicketTypeID, TicketType, Customername):
 
-def makeTicket(ticketID, TicketNr, TicketTypeID, Customername):
+
 
     #def create_ticket(klantID, soort, t, klantnaam_volledig):
 
     global ks
 
-    ks = TicketTypeID
+    ks = TicketType
     nummer = TicketNr
 
 

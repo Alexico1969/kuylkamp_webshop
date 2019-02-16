@@ -6,10 +6,18 @@ import datetime
 import time
 import json
 import os
+import smtplib
 from helpers import makeTicket
 from os import path
 from MolliePy.mollie.api.client import Client
 from MolliePy.mollie.api.error import Error
+
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+from http import cookies
+
 
 # -- Setting up App --
 
@@ -172,6 +180,8 @@ def addTicketType():
             conn.commit()
             c.execute("SELECT * FROM OfferedTickets")
             conn.commit()
+
+
 
     return render_template('addTicketType.html', rows=rows , bericht = bericht)
 
@@ -471,6 +481,7 @@ def GetCustomerInfo(method):
         Cname += " "+achternaam
 
         session["CustomerName"] = Cname
+        session["email"] = email
 
         try:
             WDYFU = request.form["WhereDidYouFindUs"]
@@ -641,12 +652,14 @@ def GenerateTickets(method):
     order = session['order']
     customerID = session['CustomerID']
     orderID = session['OrderID']
+    ticketbatch = []
 
     CustomerName = session["CustomerName"]
     counter = 1
 
     for key in order:
         for t in range(order[key]):
+
             ticketNr = "KKFF2019-" + str(customerID) + "-" + str(orderID) + "-" + str(counter)
             TicketTypeID = key
             c.execute("INSERT INTO Tickets (TicketNummer, OrderID, TicketTypeID, CustomerName, Scanned) values (?, ?, ?, ?, ?)",(ticketNr, orderID, TicketTypeID, CustomerName, 'False'))
@@ -657,10 +670,65 @@ def GenerateTickets(method):
             ID = c.fetchall()
             bericht = str(ID[0])
             ticketID = int("".join(filter(str.isdigit, str(ID[0]))))
+            email = session["email"]
 
+            k = int(key)
 
-            makeTicket(ticketID,ticketNr, TicketTypeID, CustomerName)
+            c.execute("SELECT * FROM OfferedTickets WHERE TicketTypeID = %s " % k)
+            conn.commit
+
+            f = c.fetchall()
+
+            TicketType = f[0][1]
+            Ticket = makeTicket(ticketID, ticketNr, TicketTypeID, TicketType, CustomerName)
+
+            ticketbatch.append(Ticket)
+
             counter += 1
+
+            # ---------------- mail the tickets to the customer -------------------
+
+            # initiate a secure connection
+
+            email_user = 'KuylKampTicketService@gmail.com'
+            email_password = 'KuylKuyl_01'
+            email_send = email #argument meegegeven bij het aanroepen van de functie
+
+            subject = 'Tickets KuylKamp Familiefestival'
+
+            msg = MIMEMultipart()
+            msg['From'] = email_user
+            msg['To'] = email_send
+            msg['Subject'] = subject
+
+            body = 'Beste ' + CustomerName + ","
+            body+=  """
+            Bij dezen ontvangt u de door u bestelde tickets voor het KuylKamp Familiefestival.
+            Gelieve deze tickets uit te printen en mee te brengen naar het Festival.
+            Veel plezier op het festival !
+            De festival-organisatie.
+            """
+
+            msg.attach(MIMEText(body,'plain'))
+
+            for att in ticketbatch:
+                filename= "/home/kkff/mysite/" + att
+                attachment  =open(filename,'rb')
+
+                part = MIMEBase('application','octet-stream')
+                part.set_payload((attachment).read())
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition',"attachment; filename= "+filename)
+                msg.attach(part)
+
+    text = msg.as_string()
+    server = smtplib.SMTP('smtp.gmail.com',587)
+    server.starttls()
+    server.login(email_user,email_password)
+
+
+    server.sendmail(email_user,email_send,text)
+    server.quit()
 
 
 
