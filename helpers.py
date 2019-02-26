@@ -10,7 +10,7 @@ from flask import redirect, render_template, request, session
 from functools import wraps
 
 
-def makeTicket(ticketID, TicketNr, TicketTypeID, TicketType, Customername):
+def makeTicket(ticketID, TicketNr, TicketTypeID, TicketType, Customername, ctrl):
 
 
 
@@ -24,7 +24,7 @@ def makeTicket(ticketID, TicketNr, TicketTypeID, TicketType, Customername):
 
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=12, border=4, )
 
-    QR_string = 'http://kkff.pythonanywhere.com/scanTicket?ticketID=' + str(ticketID)
+    QR_string = 'http://kkff.pythonanywhere.com/scanTicket?ticketID=' + str(ticketID) + '&ctrl=' + str(ctrl)
 
     qr.add_data(QR_string)
     qr.make(fit=True)

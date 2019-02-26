@@ -1,23 +1,20 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, redirect, session, url_for, g
+from flask import Flask, render_template, request, redirect, session, url_for
 import sqlite3
-import csv
 import datetime
-import time
-import json
 import os
+import glob
 import smtplib
+import sys
 from helpers import makeTicket
 from os import path
 from MolliePy.mollie.api.client import Client
 from MolliePy.mollie.api.error import Error
-
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-from http import cookies
-
+from random import randint
 
 # -- Setting up App --
 
@@ -29,7 +26,9 @@ app.config['SECRET_KEY'] = 'something-secret2'
 # -- Setting up Mollie
 
 mollie_client = Client()
-mollie_client.set_api_key('test_erGKTV4s4KCCmCnVx328FEWmGFQdxb')
+#mollie_client.set_api_key('test_erGKTV4s4KCCmCnVx328FEWmGFQdxb') # TESTKEY
+mollie_client.set_api_key('live_zr5PeDE3EP5tmKnrahBpV9qbQByHSV') # LIVEKEY
+
 
 # -- Setting up SQLite database --
 
@@ -47,7 +46,7 @@ PaymentStarted = False
 #c.execute("CREATE TABLE IF NOT EXISTS TicketOrders( OrderID INTEGER PRIMARY KEY AUTOINCREMENT, TotalAmount FLOAT NOT NULL, DateTime DATETIME DEFAULT CURRENT_TIMESTAMP, CustomerID INTEGER NOT NULL, MollieID TEXT NOT NULL , OrderStatus TEXT NOT NULL, Source TEXT NOT NULL, FOREIGN KEY(CustomerID) REFERENCES CustomerInfo(CustomerID));")
 #c.execute("CREATE TABLE IF NOT EXISTS CustomerInfo( CustomerID INTEGER PRIMARY KEY AUTOINCREMENT, Voornaam TEXT NOT NULL , TV TEXT NOT NULL, Achternaam TEXT NOT NULL, Email TEXT NOT NULL, TelNr INT NOT NULL, WhereDidYouFindUs TEXT);")
 #c.execute("INSERT INTO CustomerInfo( Voornaam,TV,Achternaam,Email,TelNr,WhereDidYouFindUs) values (?,?,?,?,?, ?)",("Piet","","Paulusma", "piet@paulusma.nl", 1234567890, ""))
-#c.execute("CREATE TABLE IF NOT EXISTS Tickets( TicketID INTEGER PRIMARY KEY AUTOINCREMENT, TicketNummer TEXT NOT NULL UNIQUE, OrderID INT NOT NULL, TicketTypeID INT NOT NULL, CustomerName TEXT NOT NULL, Scanned BOOLEAN NOT NULL,FOREIGN KEY(OrderID) REFERENCES TicketOrders(OrderID) ,FOREIGN KEY(TicketTypeID) REFERENCES OfferedTickets(TicketTypeID));")
+#c.execute("CREATE TABLE IF NOT EXISTS Tickets( TicketID INTEGER PRIMARY KEY AUTOINCREMENT, TicketNummer TEXT NOT NULL UNIQUE, OrderID INT NOT NULL, TicketTypeID INT NOT NULL, CustomerName TEXT NOT NULL, Scanned BOOLEAN NOT NULL, ScanDate TEXT, Ctrl INT NOT NULL,FOREIGN KEY(OrderID) REFERENCES TicketOrders(OrderID) ,FOREIGN KEY(TicketTypeID) REFERENCES OfferedTickets(TicketTypeID));")
 #conn.commit()
 #----------------------------------
 
@@ -56,6 +55,7 @@ bericht = "-"
 order = {}
 totalAmount = 0.0
 source = "Regular"
+
 
 # ------------ ROUTES ------------------------
 
@@ -69,6 +69,9 @@ def main():
     global PaymentStarted
 
     rows = {0,0,0}
+
+    if user_cookie_not_set():
+        session['user'] = "Customer"
 
     bericht = "Main - start"
 
@@ -301,10 +304,34 @@ def login_required():
 
     return False
 
+def login_required2():
+
+    try:
+        key = session.get('user_id', 'Harry')
+    except:
+        return False
+
+    if key == "Scan":
+        return True
+
+    return False
+
 def order_cookie_not_set():
 
     try:
         key = session.get('orderstatus')
+    except:
+        return True
+
+    if key == None:
+        return True
+
+    return False
+
+def user_cookie_not_set():
+
+    try:
+        key = session.get('user')
     except:
         return True
 
@@ -334,7 +361,34 @@ def login():
             message = "Cookie sent"
             return render_template('addTicketType.html', bericht=bericht)
 
-        return render_template('login.html')
+        return render_template('admin.html')
+
+    return render_template('login.html')
+
+@app.route('/login2', methods=["POST","GET"])
+def login2():
+    global CurrentUrl
+    global message
+
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        error=None
+
+        if (username != "Kuyl") or (password != "K@mp"):
+            error = "Incorrect username."
+            return render_template('login.html')
+
+        if error is None:
+            session.clear()
+            session['user_id'] = "Scan"
+            bericht = "ingelogd !"
+            return render_template('bericht.html', bericht = bericht)
+
+        bericht = "Hallo !"
+
+        return render_template('bericht.html' , bericht = bericht)
 
     return render_template('login.html')
 
@@ -348,6 +402,21 @@ def MollyReturn():
     session['user_id'] = "Not"
     return redirect('/login')
 
+@app.route('/purge')
+def purge():
+    c.execute("DELETE FROM TicketOrders;")
+    c.execute("DELETE FROM sqlite_sequence WHERE name='TicketOrders';")
+    c.execute("DELETE FROM Tickets;")
+    c.execute("DELETE FROM sqlite_sequence WHERE name='Tickets';")
+    conn.commit()
+
+    for fl in glob.glob("mysite/PDF/*.*"):
+        os.remove(fl)
+
+    return redirect('/admin')
+
+
+
 
 @app.route('/admin')
 def admin():
@@ -355,8 +424,36 @@ def admin():
     if not(login_required()):
         return redirect("/login")
 
+    session['user'] = "Admin"
     return render_template('admin.html')
 
+@app.route('/riet', methods=["POST","GET"])
+def riet():
+
+    global bericht
+    bericht="----"
+
+    if request.method  == 'POST':
+        code = request.form['code']
+        if str(code) == '2000':
+            mollie_client.set_api_key('test_erGKTV4s4KCCmCnVx328FEWmGFQdxb')
+            session['user']="Riet"
+            return redirect("/")
+        else:
+            bericht = "Foutieve pin"
+
+
+
+
+    return render_template('riet.html', bericht=bericht)
+
+@app.route('/reset')
+def reset():
+    session['orderstatus'] = 'Empty'
+    session['totalAmount'] = 0
+    session['order'] = {}
+    session['user'] = "customer"
+    return redirect("/")
 
 
 '''
@@ -413,6 +510,9 @@ def GetOrder(method):
                 source = "admin"
             else:
                 source = "customer"
+
+            if session['user'] == "Riet":
+                source = "Riet"
 
             session['orderstatus'] = "Order placed"
             session['totalAmount'] = totalAmount
@@ -497,7 +597,15 @@ def GetCustomerInfo(method):
         conn.commit()
         ID = c.fetchall()
         bericht = str(ID[0])
+
         session['CustomerID'] = int("".join(filter(str.isdigit, str(ID[0]))))
+
+        CustomerID = session['CustomerID']
+        OrderID = session['OrderID']
+
+        c.execute("UPDATE TicketOrders SET CustomerID ==:pv0 WHERE OrderID ==:pv1", {"pv0":CustomerID, "pv1":OrderID})
+
+        conn.commit()
 
         return
 
@@ -517,7 +625,19 @@ def InitiatePayment(method):
     CustomerID = str(session['CustomerID'])
     totalAmount = str(session['totalAmount'])
 
-    #bericht="InitiatePayment"
+    if not(session['user']):
+        bericht = "SESSION - ERROR"
+        session['orderstatus'] = message
+        return
+    elif (session['user'] == "Admin" or session['user'] == "Riet"):
+        mollie_client.set_api_key('test_erGKTV4s4KCCmCnVx328FEWmGFQdxb')
+    elif session['user'] != "customer":
+        bericht = "SESSION - ERROR - User: " + str(session['user'])
+        session['orderstatus'] = message
+        return
+
+
+    # mollie_client.set_api_key('test_erGKTV4s4KCCmCnVx328FEWmGFQdxb')  # <<< Om te testen, un-comment deze regel code
 
     payment = mollie_client.payments.create({
         'amount': {
@@ -526,21 +646,56 @@ def InitiatePayment(method):
         },
         'description': 'CustomerID : ' + CustomerID,
         'redirectUrl': 'https://kkff.pythonanywhere.com/returnFromMollie',
-        'webhookUrl': 'https://kkff.pythonanywhere.com//mollie-webhook/', })
+        #'webhookUrl': 'https://kkff.pythonanywhere.com//mollie-webhook/',
+        'webhookUrl': 'https://kkff.pythonanywhere.com/webhook',
 
-    #bericht = str(totalAmount)
+        })
+
+
     bericht = payment.checkout_url  # Let op !  Dit wordt in de view (template) verwerkt in een href
-    session['orderstatus'] = "Payment initiated"
 
-    mollieID = ""
+    session['MollieID'] = payment.id
+    MollieID = session['MollieID']
+    OrderID = session['OrderID']
+
+    c.execute("UPDATE TicketOrders SET MollieID ==:pv0 WHERE OrderID ==:pv1", {"pv0":MollieID, "pv1":OrderID})
+    conn.commit
+
+    return
+
+    session['orderstatus'] = "Payment initiated"
 
     OrderID = session['OrderID']
     CustomerID = session['CustomerID']
 
     c.execute("UPDATE TicketOrders SET CustomerID = %s WHERE OrderID = %s" % ( CustomerID , OrderID ))
+
     conn.commit()
 
     return
+
+@app.route('/webhook' , methods=["POST","GET"])
+def webhook():
+    global bericht
+    global session
+    global totalAmount
+    global payment
+
+    order_id = request.form['id']
+
+
+
+
+    return render_template( 'message.html',bericht = bericht )
+
+    bericht = "Entering FinishPayment"
+    rows = {}
+    FinishPayment('POST')
+
+
+
+    return render_template( 'message.html',bericht = bericht )
+
 
 @app.route('/returnFromMollie' , methods=["POST","GET"])
 def returnFromMollie():
@@ -549,26 +704,24 @@ def returnFromMollie():
     global totalAmount
     global payment
 
-    bericht = "Entering FinishPayment"
-    rows = {}
-    FinishPayment('POST')
+    pay_ID = session['MollieID']
+    payment = mollie_client.payments.get(pay_ID)
 
-    try:
-        if session['orderstatus'] != "Payment done" and session['orderstatus'] != "Payment initiated" :
-            bericht = session['orderstatus']
-            return render_template( 'plzDontTry.html', rows = rows, bericht = bericht, totalAmount = totalAmount )
-    except:
-            bericht = "error when trying to get session info"
-            return render_template( 'plzDontTry.html', rows = rows, bericht = bericht, totalAmount = totalAmount )
+    if payment.is_paid():
 
-    OrderID = session['OrderID']
+        OrderID = session['OrderID']
 
-    c.execute("UPDATE Ticketorders SET OrderStatus = 'payed'")
-    conn.commit()
+        c.execute("UPDATE Ticketorders SET OrderStatus = 'payed' WHERE OrderID is %s" % OrderID)
+        conn.commit()
 
-    GenerateTickets('GET')
+        GenerateTickets('GET')
 
-    return render_template( 'paymentSuccess.html', rows = rows, bericht = bericht, totalAmount = totalAmount )
+        return render_template( 'paymentSuccess.html', rows = rows, bericht = bericht, totalAmount = totalAmount )
+
+    else:
+
+        bericht = "Order not payed"
+        return render_template( 'message.html', bericht = bericht )
 
 
 def FinishPayment(method):
@@ -660,9 +813,12 @@ def GenerateTickets(method):
     for key in order:
         for t in range(order[key]):
 
+            ctrl = randint(1111, 9999)
+
             ticketNr = "KKFF2019-" + str(customerID) + "-" + str(orderID) + "-" + str(counter)
             TicketTypeID = key
-            c.execute("INSERT INTO Tickets (TicketNummer, OrderID, TicketTypeID, CustomerName, Scanned) values (?, ?, ?, ?, ?)",(ticketNr, orderID, TicketTypeID, CustomerName, 'False'))
+            DateTime = 0
+            c.execute("INSERT INTO Tickets (TicketNummer, OrderID, TicketTypeID, CustomerName, Scanned, ScanDate, Ctrl) values (?, ?, ?, ?, ?, ? ,?)",(ticketNr, orderID, TicketTypeID, CustomerName, 'False' , DateTime , ctrl))
             conn.commit()
 
             c.execute("SELECT TicketID FROM Tickets WHERE TicketID = (SELECT MAX(TicketID) FROM Tickets);")
@@ -680,7 +836,7 @@ def GenerateTickets(method):
             f = c.fetchall()
 
             TicketType = f[0][1]
-            Ticket = makeTicket(ticketID, ticketNr, TicketTypeID, TicketType, CustomerName)
+            Ticket = makeTicket(ticketID, ticketNr, TicketTypeID, TicketType, CustomerName, ctrl)
 
             ticketbatch.append(Ticket)
 
@@ -730,7 +886,7 @@ def GenerateTickets(method):
     server.sendmail(email_user,email_send,text)
     server.quit()
 
-
+    session['orderstatus'] = 'Empty'
 
     return
 
@@ -750,6 +906,50 @@ def ShowMessage(method):
 
     session['orderstatus'] = 'Empty'
     return
+
+
+@app.route('/scanTicket', methods=["POST","GET"])
+def scanTicket():
+
+
+
+    TicketID = int(request.args.get('ticketID'))
+    CtrlScan = int(request.args.get('ctrl'))
+
+
+    c.execute("SELECT * FROM Tickets WHERE TicketID =%s" % TicketID)
+    conn.commit()
+
+    rows = c.fetchall()
+
+    state = rows[0][5]
+    ctrl = rows[0][7]
+
+    if state == "False":
+        if CtrlScan == ctrl:
+            site = "OK.html"
+            name = rows[0][3]  #CustomerName
+            now = datetime.datetime.now()
+            DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
+            c.execute("UPDATE Tickets SET Scanned = 'True' WHERE TicketID = %s" % TicketID )
+            conn.commit()
+            #c.execute("UPDATE Tickets SET ScanDate = %s WHERE TicketID = %s" % (DateTime, TicketID) )
+            c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE TicketID ==:pv1", {"pv0":DateTime, "pv1":TicketID})
+            conn.commit()
+        else:
+            site = "NOTOK.html"
+            name = "bad ctrl"
+    else:
+        site = "NOTOK.html"
+        name = rows[0][6]  #DateScanned
+
+    return render_template(site , CustomerName = name)
+
+
+
+
+
+
 
 
 
