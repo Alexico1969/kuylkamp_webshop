@@ -43,7 +43,7 @@ def makeTicket(ticketID, TicketNr, TicketTypeID, TicketType, Customername, ctrl)
     pdf.set_font('Arial', '', 12)
     for i in range(1, 3):
         pdf.cell(0, 10, '' , 0, 1)
-    pdf.cell(0, 10, 'Dit is uw ticket dat toegang geeft tot het KuylKamp Familiefestival' , 0, 1)
+    pdf.cell(0, 10, 'Dit is je ticket dat toegang geeft tot het KuylKamp Familiefestival' , 0, 1)
     pdf.cell(0, 10, 'Neem dit ticket mee en laat het scannen bij de info-stand' , 0, 1)
     pdf.cell(0, 10, 'Ticketnummer : '+nummer , 0, 1)
     pdf.cell(0, 10, 'Op naam van : ' + Customername , 0, 1)

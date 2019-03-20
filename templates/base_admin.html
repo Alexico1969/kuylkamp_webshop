@@ -10,6 +10,7 @@
         <!-- Optional theme -->
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
          <style>
             .cntr{
@@ -50,8 +51,9 @@
                 <a class = "cntr" href="https://kkff.pythonanywhere.com/showOrders">Orders</a>
                 <a class = "cntr" href="https://kkff.pythonanywhere.com/showTickets">Tickets</a>
                 <a class = "cntr" href="https://www.mollie.com/dashboard/"><img hight = "30px" width = "100px" src="https://i.imgur.com/toZmJfM.png"/></a>
+
                 -
-                <a class = "cntr red" href="http://kkff.pythonanywhere.com/purge">PURGE</a>
+                <span class = "cntr red"><button onclick="confirmPurge()">PURGE</button></span>
                 -
                 <a class = "cntr" href="http://kkff.pythonanywhere.com/tools">Tools</a>
             </ul>
@@ -62,6 +64,16 @@
       {% block container %}{% endblock %}
     </div>
     <br/>
+
+    <script>
+        function confirmPurge() {
+          var txt;
+          var r = confirm("ARE YOU SURE ?\nALL DATA WILL BE ERASED !\n");
+          if (r == true) {
+            window.location.replace("http://kkff.pythonanywhere.com/purge");
+          }
+        }
+    </script>
 
 
 
