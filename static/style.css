@@ -63,3 +63,44 @@ input[type=number]{
     background-color: #f8dfda;
 }
 
+.pad20px{
+	padding : 0px 20px 0px 20px;
+}
+
+.graybox{
+    background-color: lightgray;
+    margin: 10px;
+    border: 5px solid darkgray;
+}
+
+.verwacht{
+    font-weight: bold;
+    color: darkred;
+}
+
+.aanwezig{
+    font-weight: bold;
+    color: green;
+}
+
+/* Flexbox */
+
+.flex-container {
+  display: flex;
+  flex-wrap: wrap;
+  margin: auto;
+  padding: 30px;
+  justify-content: center;
+}
+
+.flexbox{
+    display: flex;
+    flex-wrap: wrap;
+    margin: auto;
+    padding: 30px;
+    align-items: center;
+    justify-content: center;
+    background-color: #DFDFDF;
+}
+
+

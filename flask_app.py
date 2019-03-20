@@ -5,7 +5,6 @@ import datetime
 import os
 import glob
 import smtplib
-import sys
 from helpers import makeTicket
 from os import path
 from MolliePy.mollie.api.client import Client
@@ -26,7 +25,7 @@ app.config['SECRET_KEY'] = 'something-secret2'
 # -- Setting up Mollie
 
 mollie_client = Client()
-#mollie_client.set_api_key('test_erGKTV4s4KCCmCnVx328FEWmGFQdxb') # TESTKEY
+#mollie_client.set_api_key('test_NtexBbugzAF7ebKvmvEUfdhDjuBckN') # TESTKEY
 mollie_client.set_api_key('live_zr5PeDE3EP5tmKnrahBpV9qbQByHSV') # LIVEKEY
 
 
@@ -47,7 +46,12 @@ PaymentStarted = False
 #c.execute("CREATE TABLE IF NOT EXISTS CustomerInfo( CustomerID INTEGER PRIMARY KEY AUTOINCREMENT, Voornaam TEXT NOT NULL , TV TEXT NOT NULL, Achternaam TEXT NOT NULL, Email TEXT NOT NULL, TelNr INT NOT NULL, WhereDidYouFindUs TEXT);")
 #c.execute("INSERT INTO CustomerInfo( Voornaam,TV,Achternaam,Email,TelNr,WhereDidYouFindUs) values (?,?,?,?,?, ?)",("Piet","","Paulusma", "piet@paulusma.nl", 1234567890, ""))
 #c.execute("CREATE TABLE IF NOT EXISTS Tickets( TicketID INTEGER PRIMARY KEY AUTOINCREMENT, TicketNummer TEXT NOT NULL UNIQUE, OrderID INT NOT NULL, TicketTypeID INT NOT NULL, CustomerName TEXT NOT NULL, Scanned BOOLEAN NOT NULL, ScanDate TEXT, Ctrl INT NOT NULL,FOREIGN KEY(OrderID) REFERENCES TicketOrders(OrderID) ,FOREIGN KEY(TicketTypeID) REFERENCES OfferedTickets(TicketTypeID));")
+#c.execute("INSERT INTO OfferedTickets (TicketTypeID, TicketName, TicketPrice) values (? , ?, ?)",(7 , 'Zaterdagavond', 20.0))
 #conn.commit()
+c.execute("UPDATE OfferedTickets SET TicketName = 'Tiener (3-17 jaar)' WHERE TicketTypeID = 15")
+conn.commit()
+c.execute("UPDATE OfferedTickets SET TicketName = 'Tiener - Weekend' WHERE TicketTypeID = 16")
+conn.commit()
 #----------------------------------
 
 
@@ -71,7 +75,7 @@ def main():
     rows = {0,0,0}
 
     if user_cookie_not_set():
-        session['user'] = "Customer"
+        session['user'] = "customer"
 
     bericht = "Main - start"
 
@@ -112,10 +116,6 @@ def main():
                  "Tickets Sent" : 'thankYou.html',}
 
     options[session['orderstatus']](request.method) # this determines which Funcion is called
-
-
-    #bericht = session['orderstatus']
-    #bericht = rows
 
     if PaymentStarted:
         FinishPayment('GET')
@@ -408,6 +408,8 @@ def purge():
     c.execute("DELETE FROM sqlite_sequence WHERE name='TicketOrders';")
     c.execute("DELETE FROM Tickets;")
     c.execute("DELETE FROM sqlite_sequence WHERE name='Tickets';")
+    c.execute("DELETE FROM CustomerInfo;")
+    c.execute("DELETE FROM sqlite_sequence WHERE name='Customers';")
     conn.commit()
 
     for fl in glob.glob("mysite/PDF/*.*"):
@@ -427,6 +429,15 @@ def admin():
     session['user'] = "Admin"
     return render_template('admin.html')
 
+@app.route('/tools')
+def tools():
+
+    if not(login_required()):
+        return redirect("/login")
+
+    session['user'] = "Admin"
+    return render_template('tools.html')
+
 @app.route('/riet', methods=["POST","GET"])
 def riet():
 
@@ -435,8 +446,8 @@ def riet():
 
     if request.method  == 'POST':
         code = request.form['code']
-        if str(code) == '2000':
-            mollie_client.set_api_key('test_erGKTV4s4KCCmCnVx328FEWmGFQdxb')
+        if str(code) == '1591':
+            mollie_client.set_api_key('test_NtexBbugzAF7ebKvmvEUfdhDjuBckN')
             session['user']="Riet"
             return redirect("/")
         else:
@@ -467,6 +478,71 @@ def reset():
 
     '''
 
+@app.route('/bezoekers', methods=["POST","GET"])
+def bezoekers():
+
+    data = [0,0,0,0,0,0,0,0]
+
+    '''
+    0 = vrijdagavond - verwacht
+    1 = vrijdagavond - gescand
+    2 = zaterdagmiddag - verwacht
+    3 = zaterdagmiddag - gescand
+    4 = zaterdagavond - verwacht
+    5 = zaterdagavond - gescand
+    6 = zondag - verwacht
+    7 = zondag - gescand
+    '''
+
+    c.execute("SELECT * FROM Tickets")
+    rows = c.fetchall()
+    conn.commit()
+
+    bericht = ""
+
+    check = {
+        5 : 'vrav',  # betekent : een kaartje met ID 5 is voor de vrijdagavond
+        6 : 'zami',
+        7 : 'zaav',
+        10 : 'zami zaav',
+        11 : 'zon',
+        12 : 'vrav zami zaav zon',
+        13 : 'zami zaav',
+        14 : 'vrav zami zaav zon',
+        15 : 'zami zaav',
+        16 : 'vrav zami zaav zon',
+        }
+
+    for row in rows:
+
+        TicketTypeId = row[3]
+        gescand = row[5]
+
+        for key in check:
+            if TicketTypeId == key:
+                if 'vrav' in check[key]:
+                    data[0] += 1
+                    if gescand == 'True':
+                        data[1] +=1
+                if 'zami' in check[key]:
+                    data[2] += 1
+                    if gescand == 'True':
+                        data[3] +=1
+                if 'zaav' in check[key]:
+                    data[4] += 1
+                    if gescand == 'True':
+                        data[5] +=1
+                if 'zon' in check[key]:
+                    data[6] += 1
+                    if gescand == 'True':
+                        data[7] +=1
+
+
+
+
+    return render_template("bezoekers.html", data = data , bericht = bericht)
+
+
 
 #------------------------------- FUNCTIONS BASED ON ORDERSTATUS -----------------------------------------
 
@@ -479,55 +555,65 @@ def GetOrder(method):
     bericht = "GetOrder"
     if method == 'POST':
 
-        order = {}
+        try:
 
-        c.execute("SELECT * FROM OfferedTickets")
-        conn.commit()
-        rows = c.fetchall()
+            order = {}
 
-        bericht = ""
-        totalAmount = 0.0
+            c.execute("SELECT * FROM OfferedTickets")
+            conn.commit()
+            rows = c.fetchall()
 
-        for row in rows:
+            bericht = ""
+            totalAmount = 0.0
 
-            ticketID = str(row[0])
-            ticketName = row[1]
-            price = str(row[2])
-            amountOrdered = request.form[ticketID]
-            totalPerTicket = row[2] * float(request.form[ticketID])
-            if int(amountOrdered) > 0:
-                bericht += str(amountOrdered) + " x " + ticketName + " à € " + price  + "0 = € " + str(totalPerTicket) + "0 | "
-                totalAmount += totalPerTicket
-                order[int(ticketID)] = int(amountOrdered)
+            for row in rows:
+
+                ticketID = str(row[0])
+                ticketName = row[1]
+                price = str(row[2])
+                amountOrdered = request.form[ticketID]
+                totalPerTicket = row[2] * float(request.form[ticketID])
+                if int(amountOrdered) > 0:
+                    bericht += str(amountOrdered) + " x " + ticketName + " à € " + price  + "0 = € " + str(totalPerTicket) + "0 | "
+                    totalAmount += totalPerTicket
+                    order[int(ticketID)] = int(amountOrdered)
 
 
 
-        if totalAmount > 0 :
+            if totalAmount > 0 :
 
-            #bericht = order #om de order te checken in session['order']
+                #bericht = order #om de order te checken in session['order']
 
-            if login_required():
-                source = "admin"
+                if login_required():
+                    source = "admin"
+                else:
+                    source = "customer"
+
+                try:
+                    if session['user'] == "Riet":
+                        source = "Riet"
+                except:
+                    print('*** session key eror ***')
+
+                session['orderstatus'] = "Order placed"
+                session['totalAmount'] = totalAmount
+                session['order'] = order
+                c.execute("INSERT INTO Ticketorders (totalAmount, CustomerID, MollieID, OrderStatus , Source) values (?, ?, ?, ?, ?)",(totalAmount, 999999, "unknown","placed", source))
+                conn.commit()
+                c.execute("SELECT OrderID from Ticketorders WHERE OrderID = (SELECT MAX(OrderID) FROM TicketOrders);")
+                conn.commit()
+                OrderID = c.fetchall()
+                bericht = order
+                session['OrderID'] = int("".join(filter(str.isdigit, str(OrderID[0]))))
             else:
-                source = "customer"
+                bericht = "Geen tickets geselecteerd"
+                session['orderstatus'] = "message"
+            return
 
-            if session['user'] == "Riet":
-                source = "Riet"
-
-            session['orderstatus'] = "Order placed"
-            session['totalAmount'] = totalAmount
-            session['order'] = order
-            c.execute("INSERT INTO Ticketorders (totalAmount, CustomerID, MollieID, OrderStatus , Source) values (?, ?, ?, ?, ?)",(totalAmount, 999999, "unknown","placed", source))
-            conn.commit()
-            c.execute("SELECT OrderID from Ticketorders WHERE OrderID = (SELECT MAX(OrderID) FROM TicketOrders);")
-            conn.commit()
-            OrderID = c.fetchall()
-            bericht = order
-            session['OrderID'] = int("".join(filter(str.isdigit, str(OrderID[0]))))
-        else:
-            bericht = "Geen tickets geselecteerd"
+        except:
+            bericht = "Fout in bestelling"
             session['orderstatus'] = "message"
-        return
+            return
 
     else:
         bericht = ""
@@ -549,7 +635,7 @@ def ConfirmOrder(method):
             return
 
         session['orderstatus'] = "Order checked"
-        bericht="ConfirmOrder"
+        bericht="-"
 
         OrderID = session['OrderID']
 
@@ -564,16 +650,20 @@ def GetCustomerInfo(method):
     global rows
     global session
 
-    if method == "POST":
-        bericht = "POST"
+    bericht="";
 
+    if method == "POST":
 
         voornaam = request.form["Voornaam"]
         tv = request.form["TV"]
         achternaam = request.form["Achternaam"]
         email = request.form["Email"]
-        tlnr = request.form["TelNr"]  # tussenstap
-        tel = int(tlnr)
+        email2 = request.form["Email2"]
+
+        if email != email2:
+            bericht="emailadressen komen niet overeen";
+            print( '*** EMAILS NIET HETZELFDE ***')
+            render_template( 'message.html',bericht = bericht )
 
         Cname = voornaam
         if tv != "":
@@ -588,24 +678,26 @@ def GetCustomerInfo(method):
         except:
             WDYFU = "?"
 
-        c.execute("INSERT INTO CustomerInfo (Voornaam, TV, Achternaam, Email, TelNr, WhereDidYouFindUs) values (?, ?, ?, ?, ?, ?)",(voornaam, tv, achternaam, email, tel, WDYFU))
-        conn.commit()
+        if bericht =="":
 
-        session['orderstatus'] = "NAW done"
+            c.execute("INSERT INTO CustomerInfo (Voornaam, TV, Achternaam, Email, TelNr, WhereDidYouFindUs) values (?, ?, ?, ?, ?, ?)",(voornaam, tv, achternaam, email, '0', WDYFU))
+            conn.commit()
 
-        c.execute("SELECT CustomerID FROM CustomerInfo WHERE CustomerID = (SELECT MAX(CustomerID) FROM CustomerInfo);")
-        conn.commit()
-        ID = c.fetchall()
-        bericht = str(ID[0])
+            session['orderstatus'] = "NAW done"
 
-        session['CustomerID'] = int("".join(filter(str.isdigit, str(ID[0]))))
+            c.execute("SELECT CustomerID FROM CustomerInfo WHERE CustomerID = (SELECT MAX(CustomerID) FROM CustomerInfo);")
+            conn.commit()
+            ID = c.fetchall()
+            bericht = str(ID[0])
 
-        CustomerID = session['CustomerID']
-        OrderID = session['OrderID']
+            session['CustomerID'] = int("".join(filter(str.isdigit, str(ID[0]))))
 
-        c.execute("UPDATE TicketOrders SET CustomerID ==:pv0 WHERE OrderID ==:pv1", {"pv0":CustomerID, "pv1":OrderID})
+            CustomerID = session['CustomerID']
+            OrderID = session['OrderID']
 
-        conn.commit()
+            c.execute("UPDATE TicketOrders SET CustomerID ==:pv0 WHERE OrderID ==:pv1", {"pv0":CustomerID, "pv1":OrderID})
+
+            conn.commit()
 
         return
 
@@ -630,14 +722,14 @@ def InitiatePayment(method):
         session['orderstatus'] = message
         return
     elif (session['user'] == "Admin" or session['user'] == "Riet"):
-        mollie_client.set_api_key('test_erGKTV4s4KCCmCnVx328FEWmGFQdxb')
+        mollie_client.set_api_key('test_NtexBbugzAF7ebKvmvEUfdhDjuBckN')
     elif session['user'] != "customer":
         bericht = "SESSION - ERROR - User: " + str(session['user'])
-        session['orderstatus'] = message
+        session['orderstatus'] = "message"
         return
 
 
-    # mollie_client.set_api_key('test_erGKTV4s4KCCmCnVx328FEWmGFQdxb')  # <<< Om te testen, un-comment deze regel code
+    mollie_client.set_api_key('test_NtexBbugzAF7ebKvmvEUfdhDjuBckN')  # <<< Om te testen, un-comment deze regel code
 
     payment = mollie_client.payments.create({
         'amount': {
@@ -704,7 +796,12 @@ def returnFromMollie():
     global totalAmount
     global payment
 
-    pay_ID = session['MollieID']
+    try:
+        pay_ID = session['MollieID']
+    except:
+        bericht = "No MollieID"
+        return render_template( 'message.html', bericht = bericht )
+
     payment = mollie_client.payments.get(pay_ID)
 
     if payment.is_paid():
@@ -799,6 +896,8 @@ def FinishPayment(method):
 
 def GenerateTickets(method):
     global bericht
+    global order
+    global PaymentStarted
 
     bericht="GenerateTickets"
 
@@ -810,8 +909,11 @@ def GenerateTickets(method):
     CustomerName = session["CustomerName"]
     counter = 1
 
+
     for key in order:
         for t in range(order[key]):
+
+
 
             ctrl = randint(1111, 9999)
 
@@ -840,6 +942,8 @@ def GenerateTickets(method):
 
             ticketbatch.append(Ticket)
 
+
+
             counter += 1
 
             # ---------------- mail the tickets to the customer -------------------
@@ -858,12 +962,17 @@ def GenerateTickets(method):
             msg['Subject'] = subject
 
             body = 'Beste ' + CustomerName + ","
-            body+=  """
-            Bij dezen ontvangt u de door u bestelde tickets voor het KuylKamp Familiefestival.
-            Gelieve deze tickets uit te printen en mee te brengen naar het Festival.
-            Veel plezier op het festival !
-            De festival-organisatie.
+            body +=  """
+
+Hierbij ontvang je de door jou bestelde tickets voor het KuylKamp Familiefestival.
+Graag deze tickets uitprinten en meebrengen naar het Festival.
+Veel plezier op het festival !
+
+De festival-organisatie.
+
             """
+
+            body += "OrderID: " + str(orderID)
 
             msg.attach(MIMEText(body,'plain'))
 
@@ -887,6 +996,11 @@ def GenerateTickets(method):
     server.quit()
 
     session['orderstatus'] = 'Empty'
+    PaymentStarted = False
+    bericht = "-"
+    order = {}
+    totalAmount = 0.0
+
 
     return
 
@@ -928,7 +1042,7 @@ def scanTicket():
     if state == "False":
         if CtrlScan == ctrl:
             site = "OK.html"
-            name = rows[0][3]  #CustomerName
+            name = rows[0][4]  #CustomerName
             now = datetime.datetime.now()
             DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
             c.execute("UPDATE Tickets SET Scanned = 'True' WHERE TicketID = %s" % TicketID )
@@ -944,6 +1058,8 @@ def scanTicket():
         name = rows[0][6]  #DateScanned
 
     return render_template(site , CustomerName = name)
+
+
 
 
 

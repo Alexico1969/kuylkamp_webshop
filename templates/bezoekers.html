@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block container %}
+
+<div class="flex-container pad20px">
+    <div class="pad20px graybox">
+        <h2>Vrijdagavond</h2>
+        <h4>Verwacht: <span class="verwacht">{{data[0]}}</span> </h4>
+        <h4>Aanwezig: <span class="aanwezig">{{data[1]}}</span> </h4>
+    </div>
+
+    <div class="pad20px graybox">
+        <h2 class="pad20px">Zaterdagmiddag</h2>
+        <h4>Verwacht: <span class="verwacht">{{data[2]}}</span> </h4>
+        <h4>Aanwezig: <span class="aanwezig">{{data[3]}}</span> </h4>
+    </div>
+
+    <div class="pad20px graybox">
+        <h2>Zaterdagavond</h2>
+        <h4>Verwacht: <span class="verwacht">{{data[4]}}</span> </h4>
+        <h4>Aanwezig: <span class="aanwezig">{{data[5]}}</span> </h4>
+    </div>
+
+    <div class="pad20px graybox">
+        <h2 class="pad20px">Zondag</h2>
+        <h4>Verwacht: <span class="verwacht">{{data[6]}}</span> </h4>
+        <h4>Aanwezig: <span class="aanwezig">{{data[7]}}</span> </h4>
+    </div>
+
+</div>
+
+<div class="align_center">
+    {{bericht}}
+</div>
+
+<div class="align_center">
+    <form action="" method="POST">
+        <input type="submit" value="verversen"/>
+    </form>
+
+</div>
+
+{% endblock %}
+

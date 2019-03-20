@@ -4,20 +4,22 @@
 
     <BR/>
     <H1>Registratie</H1>
-    <p>Vul de informatie in, zodat wij uw tickets toe kunnen sturen en klik op <b>OK</b><BR/><p>
+    <p>Vul de informatie in, zodat wij je de tickets toe kunnen sturen en klik op <b>OK</b><BR/><p>
+
+    <h4 class="redfat align_center">{{bericht}}</h4>
 
     <form action="" method="POST">
-            <p><input name="Voornaam" placeholder="Voornaam" type="text" required autofocus/></p>
+            <p><input name="Voornaam" placeholder="Voornaam" type="text" pattern="[A-Za-z ]+" maxlength="40" required autofocus/></p>
 
-            <p><input name="TV" placeholder="tussenvoegsel" type="text"/></p>
+            <p><input name="TV" placeholder="tussenvoegsel" pattern="[A-Za-z ]+" type="text"/></p>
 
-            <p><input name="Achternaam" placeholder="Achternaam" type="text" required/></p>
+            <p><input name="Achternaam" placeholder="Achternaam" pattern="[A-Za-z ]+" maxlength="40" type="text" required/></p>
 
-            <p><input name="Email" placeholder="emailadres" type="email" required/></p>
+            <p><input name="Email" placeholder="emailadres" type="email" maxlength="50" required/></p>
 
-            <p><input name="TelNr" placeholder="tel.nr." type="tel" required/></p>
+            <p><input name="Email2" placeholder="bevestig emailadres" type="email" maxlength="50" required/></p>
 
-            <p>Hoe kent u het KuylKamp Festival ?</p>
+            <p>Hoe ken jij het KuylKamp Familiefestival ?</p>
             <p>
                 <INPUT TYPE="radio" NAME="WhereDidYouFindUs" VALUE="vrienden"/>Via vrienden / kennissen<BR/>
                 <INPUT TYPE="radio" NAME="WhereDidYouFindUs" VALUE="internet"/>Via internet / Facebook<BR/>
