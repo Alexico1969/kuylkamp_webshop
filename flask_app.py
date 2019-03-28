@@ -25,8 +25,8 @@ app.config['SECRET_KEY'] = 'something-secret2'
 # -- Setting up Mollie
 
 mollie_client = Client()
-#mollie_client.set_api_key('test_NtexBbugzAF7ebKvmvEUfdhDjuBckN') # TESTKEY
-mollie_client.set_api_key('live_zr5PeDE3EP5tmKnrahBpV9qbQByHSV') # LIVEKEY
+#mollie_client.set_api_key('test_9Q9RUAA2xbT7CtTvBdS7WerNGwTV88') # TESTKEY
+mollie_client.set_api_key('live_vP5pmxwcMWN3RENK3P7SfUupT9ghej') # LIVEKEY
 
 
 # -- Setting up SQLite database --
@@ -48,10 +48,10 @@ PaymentStarted = False
 #c.execute("CREATE TABLE IF NOT EXISTS Tickets( TicketID INTEGER PRIMARY KEY AUTOINCREMENT, TicketNummer TEXT NOT NULL UNIQUE, OrderID INT NOT NULL, TicketTypeID INT NOT NULL, CustomerName TEXT NOT NULL, Scanned BOOLEAN NOT NULL, ScanDate TEXT, Ctrl INT NOT NULL,FOREIGN KEY(OrderID) REFERENCES TicketOrders(OrderID) ,FOREIGN KEY(TicketTypeID) REFERENCES OfferedTickets(TicketTypeID));")
 #c.execute("INSERT INTO OfferedTickets (TicketTypeID, TicketName, TicketPrice) values (? , ?, ?)",(7 , 'Zaterdagavond', 20.0))
 #conn.commit()
-c.execute("UPDATE OfferedTickets SET TicketName = 'Tiener (3-17 jaar)' WHERE TicketTypeID = 15")
-conn.commit()
-c.execute("UPDATE OfferedTickets SET TicketName = 'Tiener - Weekend' WHERE TicketTypeID = 16")
-conn.commit()
+#c.execute("UPDATE OfferedTickets SET TicketName = 'Tiener (13-17 jaar)' WHERE TicketTypeID = 15")
+#conn.commit()
+#c.execute("UPDATE OfferedTickets SET TicketName = 'Tiener - Weekend' WHERE TicketTypeID = 16")
+#conn.commit()
 #----------------------------------
 
 
@@ -447,7 +447,7 @@ def riet():
     if request.method  == 'POST':
         code = request.form['code']
         if str(code) == '1591':
-            mollie_client.set_api_key('test_NtexBbugzAF7ebKvmvEUfdhDjuBckN')
+            mollie_client.set_api_key('test_9Q9RUAA2xbT7CtTvBdS7WerNGwTV88')
             session['user']="Riet"
             return redirect("/")
         else:
@@ -501,12 +501,11 @@ def bezoekers():
     bericht = ""
 
     check = {
+        2 : 'vrav zami zaav zon',
         5 : 'vrav',  # betekent : een kaartje met ID 5 is voor de vrijdagavond
         6 : 'zami',
-        7 : 'zaav',
         10 : 'zami zaav',
         11 : 'zon',
-        12 : 'vrav zami zaav zon',
         13 : 'zami zaav',
         14 : 'vrav zami zaav zon',
         15 : 'zami zaav',
@@ -541,6 +540,90 @@ def bezoekers():
 
 
     return render_template("bezoekers.html", data = data , bericht = bericht)
+
+
+
+@app.route('/scanTicket', methods=["POST","GET"])
+def scanTicket():
+
+
+
+    TicketID = int(request.args.get('ticketID'))
+    CtrlScan = int(request.args.get('ctrl'))
+
+
+    c.execute("SELECT * FROM Tickets WHERE TicketID =%s" % TicketID)
+    conn.commit()
+
+    rows = c.fetchall()
+
+    state = rows[0][5]
+    ctrl = rows[0][7]
+
+    if state == "False":
+        if CtrlScan == ctrl:
+            site = "OK.html"
+            name = rows[0][4]  #CustomerName
+            now = datetime.datetime.now()
+            DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
+            c.execute("UPDATE Tickets SET Scanned = 'True' WHERE TicketID = %s" % TicketID )
+            conn.commit()
+            #c.execute("UPDATE Tickets SET ScanDate = %s WHERE TicketID = %s" % (DateTime, TicketID) )
+            c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE TicketID ==:pv1", {"pv0":DateTime, "pv1":TicketID})
+            conn.commit()
+        else:
+            site = "NOTOK.html"
+            name = "bad ctrl"
+    else:
+        site = "NOTOK.html"
+        name = rows[0][6]  #DateScanned
+
+    return render_template(site , CustomerName = name)
+
+@app.route('/acceptByOrderNr', methods=["POST","GET"])
+def acceptByOrderNr():
+
+    if not(login_required()):
+        return redirect("/login")
+
+    session['user'] = "Admin"
+
+    if request.method == 'POST':
+
+        print('TODO - POST');
+        return render_template('acceptedByOrderNr.html')
+
+        '''c.execute("SELECT * FROM Tickets WHERE TicketID =%s" % TicketID)
+        conn.commit()
+
+        rows = c.fetchall()
+
+        state = rows[0][5]
+        ctrl = rows[0][7]
+
+        if state == "False":
+            if CtrlScan == ctrl:
+                site = "OK.html"
+                name = rows[0][4]  #CustomerName
+                now = datetime.datetime.now()
+                DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
+                c.execute("UPDATE Tickets SET Scanned = 'True' WHERE TicketID = %s" % TicketID )
+                conn.commit()
+                #c.execute("UPDATE Tickets SET ScanDate = %s WHERE TicketID = %s" % (DateTime, TicketID) )
+                c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE TicketID ==:pv1", {"pv0":DateTime, "pv1":TicketID})
+                conn.commit()
+            else:
+                site = "NOTOK.html"
+                name = "bad ctrl"
+        else:
+            site = "NOTOK.html"
+            name = rows[0][6]  #DateScanned'''
+
+    else:
+        return render_template('acceptByOrderNr.html')
+
+
+
 
 
 
@@ -722,14 +805,15 @@ def InitiatePayment(method):
         session['orderstatus'] = message
         return
     elif (session['user'] == "Admin" or session['user'] == "Riet"):
-        mollie_client.set_api_key('test_NtexBbugzAF7ebKvmvEUfdhDjuBckN')
+        mollie_client.set_api_key('test_9Q9RUAA2xbT7CtTvBdS7WerNGwTV88')
     elif session['user'] != "customer":
         bericht = "SESSION - ERROR - User: " + str(session['user'])
         session['orderstatus'] = "message"
         return
 
 
-    mollie_client.set_api_key('test_NtexBbugzAF7ebKvmvEUfdhDjuBckN')  # <<< Om te testen, un-comment deze regel code
+    #mollie_client.set_api_key('test_NtexBbugzAF7ebKvmvEUfdhDjuBckN')  # <<< Om te testen, un-comment deze regel code
+
 
     payment = mollie_client.payments.create({
         'amount': {
@@ -1020,44 +1104,6 @@ def ShowMessage(method):
 
     session['orderstatus'] = 'Empty'
     return
-
-
-@app.route('/scanTicket', methods=["POST","GET"])
-def scanTicket():
-
-
-
-    TicketID = int(request.args.get('ticketID'))
-    CtrlScan = int(request.args.get('ctrl'))
-
-
-    c.execute("SELECT * FROM Tickets WHERE TicketID =%s" % TicketID)
-    conn.commit()
-
-    rows = c.fetchall()
-
-    state = rows[0][5]
-    ctrl = rows[0][7]
-
-    if state == "False":
-        if CtrlScan == ctrl:
-            site = "OK.html"
-            name = rows[0][4]  #CustomerName
-            now = datetime.datetime.now()
-            DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
-            c.execute("UPDATE Tickets SET Scanned = 'True' WHERE TicketID = %s" % TicketID )
-            conn.commit()
-            #c.execute("UPDATE Tickets SET ScanDate = %s WHERE TicketID = %s" % (DateTime, TicketID) )
-            c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE TicketID ==:pv1", {"pv0":DateTime, "pv1":TicketID})
-            conn.commit()
-        else:
-            site = "NOTOK.html"
-            name = "bad ctrl"
-    else:
-        site = "NOTOK.html"
-        name = rows[0][6]  #DateScanned
-
-    return render_template(site , CustomerName = name)
 
 
 
