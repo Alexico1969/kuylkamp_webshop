@@ -5,21 +5,24 @@
 
     <div id="main">
     <h2>Bestel uw tickets</h2>
+
     <div>
         <form action="" method="POST">
             <table align="center">
-                <tr><th>Ticketnaam</th><th>Prijs</th><th>Aantal</th></tr>
+                <tr><th>Ticketnaam</th><th>Prijs(€)</th><th class="align_center">Aantal</th></tr>
 
                 <tr><td></td><td></td><td></td></tr> <!-- empty line -->
 
 
                 {% if rows !="EMPTY" %}
                     {% for row in rows %}
+
                         <tr>
                             <td>{{ row[1] }}</td>
-                            <td class="align_right" >€{{ row[2] }}0</td>
+                            <td class="align_right">{{ row[2] | replace(".",",")}}0</td>
                             <td class="align_center"><input class="align_center" type="number" name="{{row[0]}}" min="0" max="20" placeholder="0" value="0"/></td>
                         </tr>
+                        <script>document.getElementById("amount").innerHTML = '44';</script>
                     {% endfor %}
                 {% endif %}
 
@@ -28,10 +31,18 @@
             </table>
         </form>
         <p class="align_center">Tickets voor mensen met een beperking voor zondagmiddag zijn uitsluitend verkrijgbaar via Anne Broeren (06-18424376 / <a href="annebroeren@live.nl">annebroeren@live.nl</a>)</p>
+        <p class="align_center">Voor alle overige zaken :  Martien Kuypers (06-52522371 / <a href="martien.kuypers@gmail.com">martien.kuypers@gmail.com</a>)</p>
         <p>{{bericht}}</p>
     </div>
 
     </div>
+
+    <script>
+        function dot2comma(input){
+            document.getElementById("amount").innerHTML = '99';
+            return;
+        }
+    </script>
 
 {% endblock %}
 

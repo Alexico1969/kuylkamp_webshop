@@ -48,9 +48,11 @@ PaymentStarted = False
 #c.execute("CREATE TABLE IF NOT EXISTS Tickets( TicketID INTEGER PRIMARY KEY AUTOINCREMENT, TicketNummer TEXT NOT NULL UNIQUE, OrderID INT NOT NULL, TicketTypeID INT NOT NULL, CustomerName TEXT NOT NULL, Scanned BOOLEAN NOT NULL, ScanDate TEXT, Ctrl INT NOT NULL,FOREIGN KEY(OrderID) REFERENCES TicketOrders(OrderID) ,FOREIGN KEY(TicketTypeID) REFERENCES OfferedTickets(TicketTypeID));")
 #c.execute("INSERT INTO OfferedTickets (TicketTypeID, TicketName, TicketPrice) values (? , ?, ?)",(7 , 'Zaterdagavond', 20.0))
 #conn.commit()
-#c.execute("UPDATE OfferedTickets SET TicketName = 'Tiener (13-17 jaar)' WHERE TicketTypeID = 15")
+c.execute("UPDATE OfferedTickets SET TicketName = 'Kind (4-12 jaar)' WHERE TicketTypeID = 13")
+conn.commit()
+#c.execute("UPDATE Tickets SET ScanDate = '0' WHERE TicketID = 19")
 #conn.commit()
-#c.execute("UPDATE OfferedTickets SET TicketName = 'Tiener - Weekend' WHERE TicketTypeID = 16")
+#c.execute("UPDATE Tickets SET Scanned = 'False' WHERE TicketID = 19")
 #conn.commit()
 #----------------------------------
 
@@ -184,7 +186,7 @@ def addTicketType():
             c.execute("SELECT * FROM OfferedTickets")
             conn.commit()
 
-
+    bericht = ""
 
     return render_template('addTicketType.html', rows=rows , bericht = bericht)
 
@@ -250,6 +252,19 @@ def showTickets():
             c.execute("SELECT * FROM Tickets")
             conn.commit()
             rows=c.fetchall()
+
+        if actie == "Res":
+            record = request.form.get("action")
+            record = int(record.split()[2]) # splits "Delete 2"
+            bericht = "Record "+ str(record) + " is reset"
+
+            DateTime = 0
+            c.execute("UPDATE Tickets SET Scanned = 'False' WHERE TicketID = %s" % record )
+            conn.commit()
+            c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE TicketID ==:pv1", {"pv0":DateTime, "pv1":record})
+            conn.commit()
+            rows=c.fetchall()
+
 
     return render_template('showTickets.html', rows=rows , bericht = bericht)
 
@@ -557,8 +572,13 @@ def scanTicket():
 
     rows = c.fetchall()
 
-    state = rows[0][5]
-    ctrl = rows[0][7]
+
+    try:
+        state = rows[0][5]
+        ctrl = rows[0][7]
+    except:
+        site = "NOTOK.html"
+        return render_template(site , CustomerName = "No such Ticket")
 
     if state == "False":
         if CtrlScan == ctrl:
@@ -568,9 +588,11 @@ def scanTicket():
             DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
             c.execute("UPDATE Tickets SET Scanned = 'True' WHERE TicketID = %s" % TicketID )
             conn.commit()
-            #c.execute("UPDATE Tickets SET ScanDate = %s WHERE TicketID = %s" % (DateTime, TicketID) )
             c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE TicketID ==:pv1", {"pv0":DateTime, "pv1":TicketID})
             conn.commit()
+            if rows[0][3] == 17:
+                site="ThanksForDonation.html"
+                name="Bedankt voor uw donatie - Dit is echter geen ticket !"
         else:
             site = "NOTOK.html"
             name = "bad ctrl"
@@ -590,37 +612,53 @@ def acceptByOrderNr():
 
     if request.method == 'POST':
 
-        print('TODO - POST');
-        return render_template('acceptedByOrderNr.html')
-
-        '''c.execute("SELECT * FROM Tickets WHERE TicketID =%s" % TicketID)
+        TicketID_input = int(request.form['OrderNr'])
+        session['OrderID'] = TicketID_input
+        c.execute("SELECT * FROM Tickets WHERE OrderID = %s " % TicketID_input )
         conn.commit()
+        rows=c.fetchall()
 
-        rows = c.fetchall()
-
-        state = rows[0][5]
-        ctrl = rows[0][7]
-
-        if state == "False":
-            if CtrlScan == ctrl:
-                site = "OK.html"
-                name = rows[0][4]  #CustomerName
-                now = datetime.datetime.now()
-                DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
-                c.execute("UPDATE Tickets SET Scanned = 'True' WHERE TicketID = %s" % TicketID )
-                conn.commit()
-                #c.execute("UPDATE Tickets SET ScanDate = %s WHERE TicketID = %s" % (DateTime, TicketID) )
-                c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE TicketID ==:pv1", {"pv0":DateTime, "pv1":TicketID})
-                conn.commit()
-            else:
-                site = "NOTOK.html"
-                name = "bad ctrl"
-        else:
-            site = "NOTOK.html"
-            name = rows[0][6]  #DateScanned'''
+        return render_template('acceptedByOrderNrShowTickets.html' , rows=rows, bericht = "acceptByOrderNr")
 
     else:
         return render_template('acceptByOrderNr.html')
+
+@app.route('/acceptBO', methods=["POST","GET"])
+def acceptBO():
+
+    if not(login_required()):
+        return redirect("/login")
+
+    session['user'] = "Admin"
+
+    if request.method == 'POST':
+
+        try:
+            temp = request.form['OBON']
+        except:
+            bericht = "Deze pagina is niet rechtstreeks benaderbaar !";
+            return render_template( 'message.html',bericht = bericht )
+
+
+        orderID = session['OrderID']
+
+        c.execute("UPDATE Tickets SET Scanned = 'True' WHERE OrderID = %s" % orderID)
+        conn.commit()
+
+        now = datetime.datetime.now()
+        DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
+        c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE OrderID ==:pv1", {"pv0":DateTime, "pv1":orderID})
+        conn.commit()
+
+        c.execute("SELECT * FROM Tickets WHERE OrderID = %s " % orderID )
+        conn.commit()
+        rows=c.fetchall()
+
+
+
+        return render_template('acceptedByOrderNrShowTickets.html' , rows=rows, bericht = "acceptByOrderNr")
+
+
 
 
 

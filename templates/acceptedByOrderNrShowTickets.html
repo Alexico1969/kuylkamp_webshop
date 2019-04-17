@@ -2,11 +2,11 @@
 
 {% block container %}
     <div id="main">
-    <h2>Table <span class="redfat">Tickets</span></h2>
+    <h2>Table <span class="redfat">Tickets (accept by OrderNr)</span></h2>
     <div>
-        <form action="" method="POST">
+        <form action="http://kkff.pythonanywhere.com/acceptBO" method="POST">
             <table align="center" class="table">
-                <tr><th>Ticketnummer</th><th>OrderID</th><th>TicketTypeID</th><th>CustomerName</th><th>Scanned ?</th><th>Scan date</th><th>Ctrl</th><th>Del</th></tr>
+                <tr><th>Ticketnummer</th><th>OrderID</th><th>TicketTypeID</th><th>CustomerName</th><th>Scanned ?</th><th>Scan date</th><th>Ctrl</th></tr>
 
                 <tr><td></td><td></td><td></td></td><td></td><td></td></tr> <!-- empty line -->
 
@@ -21,14 +21,15 @@
                             <td>{{ row[5] }}</td>
                             <td>{{ row[6] }}</td>
                             <td>{{ row[7] }}</td>
-                            <td><input type="submit" name="action" value="Delete record {{ row[0] }}"/></td>
-                            <td><input type="submit" name="action" value="Reset scanstatus {{ row[0] }}"/></td>
                         </tr>
                     {% endfor %}
                 {% endif %}
             </table>
+
+            <div class="align_center"><input type="submit" name="OBON" value="Accepteren"/></div>
         </form>
         <p>bericht : {{bericht}}</p>
+        <div class="align_center"><img src="https://i.imgur.com/Cj8dEWk.png"/></div>
     </div>
 
     </div>
