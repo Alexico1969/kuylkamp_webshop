@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, flash, render_template, request, redirect, session, url_for
 import sqlite3
 import datetime
 import os
@@ -34,6 +34,7 @@ mollie_client.set_api_key('live_vP5pmxwcMWN3RENK3P7SfUupT9ghej') # LIVEKEY
 ROOT = path.dirname(path.realpath(__file__))
 conn = sqlite3.connect(path.join(ROOT,"kkff.db"))
 c = conn.cursor()
+startdate  = datetime.datetime(2019, 6, 20)
 
 PaymentStarted = False
 
@@ -48,8 +49,8 @@ PaymentStarted = False
 #c.execute("CREATE TABLE IF NOT EXISTS Tickets( TicketID INTEGER PRIMARY KEY AUTOINCREMENT, TicketNummer TEXT NOT NULL UNIQUE, OrderID INT NOT NULL, TicketTypeID INT NOT NULL, CustomerName TEXT NOT NULL, Scanned BOOLEAN NOT NULL, ScanDate TEXT, Ctrl INT NOT NULL,FOREIGN KEY(OrderID) REFERENCES TicketOrders(OrderID) ,FOREIGN KEY(TicketTypeID) REFERENCES OfferedTickets(TicketTypeID));")
 #c.execute("INSERT INTO OfferedTickets (TicketTypeID, TicketName, TicketPrice) values (? , ?, ?)",(7 , 'Zaterdagavond', 20.0))
 #conn.commit()
-c.execute("UPDATE OfferedTickets SET TicketName = 'Kind (4-12 jaar)' WHERE TicketTypeID = 13")
-conn.commit()
+#c.execute("UPDATE OfferedTickets SET TicketName = 'Kind (4-12 jaar)' WHERE TicketTypeID = 13")
+#conn.commit()
 #c.execute("UPDATE Tickets SET ScanDate = '0' WHERE TicketID = 19")
 #conn.commit()
 #c.execute("UPDATE Tickets SET Scanned = 'False' WHERE TicketID = 19")
@@ -200,7 +201,7 @@ def showCustomers():
     if not(login_required()):
         return redirect("/login")
 
-    c.execute("SELECT * FROM CustomerInfo")
+    c.execute("SELECT * FROM CustomerInfo ORDER BY CustomerID DESC")
     conn.commit()
 
     rows=c.fetchall()
@@ -217,7 +218,7 @@ def showCustomers():
 
             c.execute("DELETE FROM CustomerInfo WHERE CustomerID = %s " % record)
             conn.commit()
-            c.execute("SELECT * FROM CustomerInfo")
+            c.execute("SELECT * FROM CustomerInfo ORDER BY CustomerID DESC")
             conn.commit()
             rows=c.fetchall()
 
@@ -232,7 +233,7 @@ def showTickets():
     if not(login_required()):
         return redirect("/login")
 
-    c.execute("SELECT * FROM Tickets")
+    c.execute("SELECT * FROM Tickets ORDER BY TicketID DESC")
     conn.commit()
 
     rows=c.fetchall()
@@ -249,7 +250,7 @@ def showTickets():
 
             c.execute("DELETE FROM Tickets WHERE TicketID = %s " % record)
             conn.commit()
-            c.execute("SELECT * FROM Tickets")
+            c.execute("SELECT * FROM Tickets ORDER BY TicketID DESC")
             conn.commit()
             rows=c.fetchall()
 
@@ -276,7 +277,7 @@ def showOrders():
     if not(login_required()):
         return redirect("/login")
 
-    c.execute("SELECT * FROM TicketOrders")
+    c.execute("SELECT * FROM TicketOrders ORDER BY OrderID DESC")
     conn.commit()
 
     rows=c.fetchall()
@@ -293,9 +294,10 @@ def showOrders():
 
             c.execute("DELETE FROM TicketOrders WHERE OrderID = %s " % record)
             conn.commit()
-            c.execute("SELECT * FROM TicketOrders")
+            c.execute("SELECT * FROM TicketOrders ORDER BY OrderID DESC")
             conn.commit()
             rows=c.fetchall()
+            rows.sort(reverse=True)
 
     return render_template('showOrders.html', rows=rows , bericht = bericht)
 
@@ -462,7 +464,7 @@ def riet():
     if request.method  == 'POST':
         code = request.form['code']
         if str(code) == '1591':
-            mollie_client.set_api_key('test_9Q9RUAA2xbT7CtTvBdS7WerNGwTV88')
+            session['molliekey'] = 'test_9Q9RUAA2xbT7CtTvBdS7WerNGwTV88'
             session['user']="Riet"
             return redirect("/")
         else:
@@ -561,11 +563,21 @@ def bezoekers():
 @app.route('/scanTicket', methods=["POST","GET"])
 def scanTicket():
 
+    d1 = datetime.datetime.now()
+    d2 = startdate
 
+    if d1<d2:
+        bericht = "Het festival is nog niet begonnen !"
+        site = "message.html"
+        return render_template(site , bericht = bericht)
 
-    TicketID = int(request.args.get('ticketID'))
-    CtrlScan = int(request.args.get('ctrl'))
-
+    try:
+        TicketID = int(request.args.get('ticketID'))
+        CtrlScan = int(request.args.get('ctrl'))
+    except:
+        site = "message.html"
+        bericht = "Scan - error"
+        return render_template(site , bericht = bericht)
 
     c.execute("SELECT * FROM Tickets WHERE TicketID =%s" % TicketID)
     conn.commit()
@@ -843,7 +855,11 @@ def InitiatePayment(method):
         session['orderstatus'] = message
         return
     elif (session['user'] == "Admin" or session['user'] == "Riet"):
-        mollie_client.set_api_key('test_9Q9RUAA2xbT7CtTvBdS7WerNGwTV88')
+        flash('User : ' + session['user'])
+        if session.get("molliekey"):
+            mollie_client.set_api_key(session['molliekey'])
+        else:
+            mollie_client.set_api_key('live_vP5pmxwcMWN3RENK3P7SfUupT9ghej')
     elif session['user'] != "customer":
         bericht = "SESSION - ERROR - User: " + str(session['user'])
         session['orderstatus'] = "message"
@@ -924,7 +940,13 @@ def returnFromMollie():
         bericht = "No MollieID"
         return render_template( 'message.html', bericht = bericht )
 
-    payment = mollie_client.payments.get(pay_ID)
+    try:
+        payment = mollie_client.payments.get(pay_ID)
+    except:
+        bericht = "Mollie Key Error"
+        return render_template( 'message.html', bericht = bericht )
+
+    mollie_client.set_api_key('live_vP5pmxwcMWN3RENK3P7SfUupT9ghej')
 
     if payment.is_paid():
 
