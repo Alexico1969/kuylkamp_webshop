@@ -568,12 +568,10 @@ def scanTicket():
     d1 = datetime.datetime.now()
     d2 = startdate
 
-    '''
     if d1<d2:
         bericht = "Het festival is nog niet begonnen !"
         site = "message.html"
         return render_template(site , bericht = bericht)
-    '''
 
     try:
         TicketID = int(request.args.get('ticketID'))
