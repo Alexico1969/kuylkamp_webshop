@@ -49,6 +49,8 @@ PaymentStarted = False
 #c.execute("CREATE TABLE IF NOT EXISTS Tickets( TicketID INTEGER PRIMARY KEY AUTOINCREMENT, TicketNummer TEXT NOT NULL UNIQUE, OrderID INT NOT NULL, TicketTypeID INT NOT NULL, CustomerName TEXT NOT NULL, Scanned BOOLEAN NOT NULL, ScanDate TEXT, Ctrl INT NOT NULL,FOREIGN KEY(OrderID) REFERENCES TicketOrders(OrderID) ,FOREIGN KEY(TicketTypeID) REFERENCES OfferedTickets(TicketTypeID));")
 #c.execute("INSERT INTO OfferedTickets (TicketTypeID, TicketName, TicketPrice) values (? , ?, ?)",(7 , 'Zaterdagavond', 20.0))
 #conn.commit()
+#c.execute("CREATE TABLE IF NOT EXISTS PeopleList(Name TEXT NOT NULL);")
+#conn.commit()
 #c.execute("UPDATE OfferedTickets SET TicketName = 'Kind (4-12 jaar)' WHERE TicketTypeID = 13")
 #conn.commit()
 #c.execute("UPDATE Tickets SET ScanDate = '0' WHERE TicketID = 19")
@@ -566,10 +568,12 @@ def scanTicket():
     d1 = datetime.datetime.now()
     d2 = startdate
 
+    '''
     if d1<d2:
         bericht = "Het festival is nog niet begonnen !"
         site = "message.html"
         return render_template(site , bericht = bericht)
+    '''
 
     try:
         TicketID = int(request.args.get('ticketID'))
@@ -635,7 +639,7 @@ def acceptByOrderNr():
     else:
         return render_template('acceptByOrderNr.html')
 
-@app.route('/acceptBO', methods=["POST","GET"])
+@app.route('/acceptBO', methods=["POST","GET"])   # accept bij Order Nr.
 def acceptBO():
 
     if not(login_required()):
@@ -670,8 +674,39 @@ def acceptBO():
 
         return render_template('acceptedByOrderNrShowTickets.html' , rows=rows, bericht = "acceptByOrderNr")
 
+@app.route('/listWT', methods=["POST","GET"])  #list weekend-tickets
+def listWT():
+
+    if not(login_required()):
+        return redirect("/login")
+
+    session['user'] = "Admin"
+
+    c.execute("SELECT * FROM Tickets WHERE TicketTypeID ='2' ")
+
+    conn.commit()
+    rows=c.fetchall()
+
+    return render_template('listWeekendTickets.html' , rows=rows, bericht = bericht)
 
 
+@app.route('/peoplelist',methods=["POST","GET"])  #display list of ski jumpers
+def peoplelist():
+    rows=""
+    bericht=""
+
+    c.execute("SELECT CustomerName FROM Tickets WHERE Scanned = 'True' ORDER BY ScanDate DESC LIMIT 10;")
+    conn.commit()
+    temprows = c.fetchall()
+
+    rows = []
+
+    for row in temprows:
+            rows += row
+
+    rows = list(dict.fromkeys(rows))
+
+    return render_template('peoplelist.html' , rows=rows, bericht = rows)
 
 
 

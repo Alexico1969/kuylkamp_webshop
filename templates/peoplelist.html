@@ -1,0 +1,68 @@
+<html>
+<head>
+    <meta http-equiv="refresh" content="10"/>
+    <style>
+        body{
+            background-image:url("https://i.imgur.com/ZytPqiP.png");
+            background-repeat: no-repeat;
+            background-size: 100%;
+        }
+        img {
+            opacity: 0.8;
+            text-align: center;
+        }
+        table{
+            font-family: arial;
+            font-size:36px;
+            color: white;
+            text-shadow: 2px 2px #000010;
+
+        }
+
+        .center {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 50%;
+        }
+
+        .bluegrad{
+            background-image: url("https://i.imgur.com/YqEK6VD.png");
+            background-repeat: no-repeat;
+            background-size: auto;
+        }
+
+        .bluegrad_small{
+            background-image: url("https://i.imgur.com/sajl5Ex.png");
+            background-repeat: no-repeat;
+            background-size: 120%;
+        }
+
+
+
+
+
+
+    </style>
+
+</head>
+
+<body>
+    <br/>
+    <img class="center" src="https://i.imgur.com/XWT77Yz.png">
+    <br/>
+    {% set count = [0] %}
+    <table align="center">
+    {% if rows !="EMPTY" %}
+        {% for row in rows %}
+            <tr>
+                <td class="bluegrad" width="580px">&nbsp;{{row}}</td>
+                <td><img src="https://i.imgur.com/iD11ZlW.png"></td>
+                <td class="bluegrad_small">&nbsp;+1.0{{count[0]}}&nbsp;</td>
+            </tr>
+            {% if count.append(count.pop() + 1) %}{% endif %} {# increment count by 1 #}
+        {% endfor %}
+    {% endif %}
+    </table>
+</body>
+</html>

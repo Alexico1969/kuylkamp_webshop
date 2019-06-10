@@ -1,0 +1,39 @@
+{% extends 'base_admin.html' %}
+
+{% block container %}
+    <div id="main">
+    <h2>Table <span class="redfat">WEEKEND - Tickets</span></h2>
+    <div>
+        <form action="" method="POST">
+            <table align="center" class="table">
+                <tr><th>Ticketnummer</th><th>OrderID</th><th>CustomerName</th><th>ID</th></tr>
+
+                <tr><td></td><td></td><td></td></td><td></td><td></td></tr> <!-- empty line -->
+
+
+                {% if rows !="EMPTY" %}
+                    {% for row in rows %}
+
+                        <tr>
+                            <td>{{ row[1] }}</td>
+                            <td>{{ row[2] }}</td>
+                            <td>{{ row[4] }}</td>
+                            <td>{{ row[0] }}</td>
+                        </tr>
+                    {% endfor %}
+                {% endif %}
+            </table>
+        </form>
+        <p>bericht : {{bericht}}</p>
+    </div>
+
+    </div>
+
+
+
+
+{% endblock %}
+
+{% block footer %}
+        &copy; Copyright 2019 by <a href="http://domain.invalid/">you</a>.
+{% endblock %}
