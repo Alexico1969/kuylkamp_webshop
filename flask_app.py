@@ -5,6 +5,7 @@ import datetime
 import os
 import glob
 import smtplib
+import csv
 from helpers import makeTicket
 from os import path
 from MolliePy.mollie.api.client import Client
@@ -14,6 +15,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from random import randint
+from fpdf import FPDF
+
 
 # -- Setting up App --
 
@@ -129,6 +132,8 @@ def main():
         InitiatePayment('GET')
         PaymentStarted = True
 
+    #session['rows'] = rows
+
     return render_template( renderPage[session['orderstatus']], rows = rows, bericht = bericht, totalAmount = totalAmount )
 
 
@@ -191,6 +196,8 @@ def addTicketType():
 
     bericht = ""
 
+    #session['rows'] = rows
+
     return render_template('addTicketType.html', rows=rows , bericht = bericht)
 
 
@@ -223,6 +230,11 @@ def showCustomers():
             c.execute("SELECT * FROM CustomerInfo ORDER BY CustomerID DESC")
             conn.commit()
             rows=c.fetchall()
+
+    #session['rows'] = rows
+
+    CreatePDF(rows)
+    createCSV(rows)
 
     return render_template('showCustomers.html', rows=rows , bericht = bericht)
 
@@ -260,7 +272,6 @@ def showTickets():
             record = request.form.get("action")
             record = int(record.split()[2]) # splits "Delete 2"
             bericht = "Record "+ str(record) + " is reset"
-
             DateTime = 0
             c.execute("UPDATE Tickets SET Scanned = 'False' WHERE TicketID = %s" % record )
             conn.commit()
@@ -268,6 +279,10 @@ def showTickets():
             conn.commit()
             rows=c.fetchall()
 
+    #session['rows'] = rows
+
+    CreatePDF(rows)
+    createCSV(rows)
 
     return render_template('showTickets.html', rows=rows , bericht = bericht)
 
@@ -300,6 +315,11 @@ def showOrders():
             conn.commit()
             rows=c.fetchall()
             rows.sort(reverse=True)
+
+    #session['rows'] = rows
+
+    CreatePDF(rows)
+    createCSV(rows)
 
     return render_template('showOrders.html', rows=rows , bericht = bericht)
 
@@ -614,6 +634,8 @@ def scanTicket():
         site = "NOTOK.html"
         name = rows[0][6]  #DateScanned
 
+
+
     return render_template(site , CustomerName = name)
 
 @app.route('/acceptByOrderNr', methods=["POST","GET"])
@@ -685,6 +707,8 @@ def listWT():
     conn.commit()
     rows=c.fetchall()
 
+    #session['rows'] = rows
+
     return render_template('listWeekendTickets.html' , rows=rows, bericht = bericht)
 
 
@@ -704,11 +728,65 @@ def peoplelist():
 
     rows = list(dict.fromkeys(rows))
 
+    #session['rows'] = rows
+
     return render_template('peoplelist.html' , rows=rows, bericht = rows)
 
 
+@app.route('/MakePDF', methods=["GET"])
+def MakePDFList():
+
+    if not(login_required()):
+        return redirect("/login")
+
+    session['user'] = "Admin"
+
+    return render_template('showPDF.html')
 
 
+def CreatePDF(rows):
+
+    if not(login_required()):
+        return redirect("/login")
+
+    session['user'] = "Admin"
+
+    dt = str(datetime.datetime.now())
+
+    # Create PDF
+    pdf = FPDF()
+    pdf.add_page(orientation = 'L')
+    pdf.set_font('Arial', 'B', 10)
+    pdf.write(5, 'Rows : ')
+    pdf.ln(h = '')
+
+    for row in rows:
+        pdf.write(5, str(row))
+        pdf.write(5,',')
+        pdf.ln(h = '')
+
+    pdf.output('tuto1.pdf', 'F')
+
+
+    #pdf_filename =  dt + ".pdf"
+    pdf_filename =  "output.pdf"
+
+    pdf.output( "mysite/PDF/" + pdf_filename, 'F')
+
+    return
+
+
+def createCSV(rows):
+
+    ofile  = open('mysite/PDF/rows.csv', "wt")
+    writer = csv.writer(ofile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
+
+    for row in rows:
+        writer.writerow(row)
+
+    ofile.close()
+
+    return
 
 #------------------------------- FUNCTIONS BASED ON ORDERSTATUS -----------------------------------------
 
@@ -1197,6 +1275,9 @@ def ShowMessage(method):
 
     session['orderstatus'] = 'Empty'
     return
+
+
+
 
 
 

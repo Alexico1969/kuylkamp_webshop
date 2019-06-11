@@ -2,32 +2,33 @@
 
 {% block container %}
     <div id="main">
-    <h2>Table <span class="redfat">CustomerInfo</span></h2>
-    <div>
-        <form action="" method="POST">
-            <table align="center" class="table">
-                <tr><th>Voornaam</th><th>tv</th><th>Achternaam</th><th>email</th><th>tel</th><th>HDYFU</th><th>Del</th></tr>
+        <h2>Table <span class="redfat">CustomerInfo</span></h2>
+        <div>
+            <form action="" method="POST">
+                <table align="center" class="table">
+                    <tr><th>Voornaam</th><th>tv</th><th>Achternaam</th><th>email</th><th>tel</th><th>HDYFU</th><th>Del</th></tr>
 
-                <tr><td></td><td></td><td></td></td><td></td><td></td></tr> <!-- empty line -->
+                    <tr><td></td><td></td><td></td></td><td></td><td></td></tr> <!-- empty line -->
 
 
-                {% if rows !="EMPTY" %}
-                    {% for row in rows %}
-                        <tr>
-                            <td>{{ row[1] }}</td>
-                            <td>{{ row[2] }}</td>
-                            <td>{{ row[3] }}</td>
-                            <td>{{ row[4] }}</td>
-                            <td>{{ row[5] }}</td>
-                            <td>{{ row[6] }}</td>
-                            <td><input type="submit" name="action" value="Delete record {{ row[0] }}"/></td>
-                        </tr>
-                    {% endfor %}
-                {% endif %}
-            </table>
-        </form>
-        <p>bericht : {{bericht}}</p>
-    </div>
+                    {% if rows !="EMPTY" %}
+                        {% for row in rows %}
+                            <tr>
+                                <td>{{ row[1] }}</td>
+                                <td>{{ row[2] }}</td>
+                                <td>{{ row[3] }}</td>
+                                <td>{{ row[4] }}</td>
+                                <td>{{ row[5] }}</td>
+                                <td>{{ row[6] }}</td>
+                                <td><input type="submit" name="action" value="Delete record {{ row[0] }}"/></td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                </table>
+            </form>
+            <p>bericht : {{bericht}}</p>
+
+        </div>
 
     </div>
 

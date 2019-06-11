@@ -12,10 +12,6 @@ from functools import wraps
 
 def makeTicket(ticketID, TicketNr, TicketTypeID, TicketType, Customername, ctrl):
 
-
-
-    #def create_ticket(klantID, soort, t, klantnaam_volledig):
-
     global ks
 
     ks = TicketType
