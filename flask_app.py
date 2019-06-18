@@ -196,7 +196,8 @@ def addTicketType():
 
     bericht = ""
 
-    #session['rows'] = rows
+    CreatePDF(rows)
+    createCSV(rows)
 
     return render_template('addTicketType.html', rows=rows , bericht = bericht)
 
@@ -230,8 +231,6 @@ def showCustomers():
             c.execute("SELECT * FROM CustomerInfo ORDER BY CustomerID DESC")
             conn.commit()
             rows=c.fetchall()
-
-    #session['rows'] = rows
 
     CreatePDF(rows)
     createCSV(rows)
@@ -588,10 +587,13 @@ def scanTicket():
     d1 = datetime.datetime.now()
     d2 = startdate
 
+
     if d1<d2:
         bericht = "Het festival is nog niet begonnen !"
         site = "message.html"
         return render_template(site , bericht = bericht)
+
+
 
     try:
         TicketID = int(request.args.get('ticketID'))
@@ -707,7 +709,8 @@ def listWT():
     conn.commit()
     rows=c.fetchall()
 
-    #session['rows'] = rows
+    CreatePDF(rows)
+    createCSV(rows)
 
     return render_template('listWeekendTickets.html' , rows=rows, bericht = bericht)
 
@@ -728,7 +731,8 @@ def peoplelist():
 
     rows = list(dict.fromkeys(rows))
 
-    #session['rows'] = rows
+    CreatePDF(rows)
+    createCSV(rows)
 
     return render_template('peoplelist.html' , rows=rows, bericht = rows)
 
@@ -787,6 +791,76 @@ def createCSV(rows):
     ofile.close()
 
     return
+
+@app.route('/ShowStats', methods=["GET"])
+def ShowStats():
+
+    if not(login_required()):
+        return redirect("/login")
+
+    session['user'] = "Admin"
+
+    c.execute("SELECT * FROM Tickets;")
+    conn.commit()
+    temprows = c.fetchall()
+
+    rows = {}
+    counter = 0
+    weekendCounter = 0
+    vrijdagCounter = 0
+    zaterdagCounter = 0
+    zondagCounter = 0
+    zamiCounter = 0
+    kindCounter = 0
+    kindWeekendCounter = 0
+    tienerCounter = 0
+    tienerWeekendCounter = 0
+    donatieCounter = 0
+
+
+    for row in temprows:
+        counter += 1
+        ticket = row[3]
+        if ticket == 2:
+            weekendCounter += 1
+        if ticket == 5:
+            vrijdagCounter += 1
+        if ticket == 6:
+            zamiCounter += 1
+        if ticket == 10:
+            zaterdagCounter += 1
+        if ticket == 11:
+            zondagCounter += 1
+        if ticket == 13:
+            kindCounter += 1
+        if ticket == 14:
+            kindWeekendCounter += 1
+        if ticket == 15:
+            tienerCounter += 1
+        if ticket == 16:
+            tienerWeekendCounter += 1
+        if ticket == 17:
+            donatieCounter += 1
+
+
+
+    rows["TotaalTickets"] = counter
+    rows["WeekendCounter"] = weekendCounter
+    rows["VrijdagCounter"] = vrijdagCounter
+    rows["ZaterdagCounter"] = zaterdagCounter
+    rows["ZamiCounter"] = zamiCounter
+    rows["ZondagCounter"] = zondagCounter
+    rows["KindCounter"] = kindCounter
+    rows["KindWeekendCounter"] = kindWeekendCounter
+    rows["TienerCounter"] = tienerCounter
+    rows["TienerWeekendCounter"] = tienerWeekendCounter
+    rows["DonatieCounter"] = donatieCounter
+
+
+
+
+    return render_template('ShowStats.html', rows = rows)
+
 
 #------------------------------- FUNCTIONS BASED ON ORDERSTATUS -----------------------------------------
 

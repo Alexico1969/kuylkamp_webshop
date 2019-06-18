@@ -1,0 +1,38 @@
+{% extends 'base_admin.html' %}
+
+{% block container %}
+    <div id="main">
+    <h2><span class="redfat">Statistieken (intern)</span></h2>
+    <div>
+        <p>Totaal aantal uitgegeven tickets : {{rows['TotaalTickets']}}  </p>
+        <p>Aantal uitgegeven Weekendtickets : {{rows['WeekendCounter']}}</p>
+        <p>Aantal uitgegeven vrijdagtickets : {{rows['VrijdagCounter']}}  </p>
+        <p>Aantal uitgegeven zaterdagtickets : {{rows['ZaterdagCounter']}}  </p>
+        <p>Aantal uitgegeven zaterdagmiddagtickets : {{rows['ZamiCounter']}}  </p>
+        <p>Aantal uitgegeven zondagtickets : {{rows['ZondagCounter']}}  </p>
+        <p>Aantal uitgegeven kindertickets : {{rows['KindCounter']}}  </p>
+        <p>Aantal uitgegeven kinder-weekendtickets : {{rows['KindWeekendCounter']}}  </p>
+        <p>Aantal uitgegeven tienertickets : {{rows['TienerCounter']}}  </p>
+        <p>Aantal uitgegeven tiener-weekendtickets : {{rows['TienerWeekendCounter']}}  </p>
+        <p>Aantal donaties: {{rows['DonatieCounter']}}  </p>
+
+                {% if rows !="EMPTY" %}
+                    {% for row in rows %}
+                            <!-- {{ row }}  -->
+                    {% endfor %}
+                {% endif %}
+
+        <p>{{bericht}}</p>
+
+    </div>
+
+    </div>
+
+
+
+
+{% endblock %}
+
+{% block footer %}
+    (c) 2019 Alex van Winkel ( alexicoo@gmail.com )
+{% endblock %}
