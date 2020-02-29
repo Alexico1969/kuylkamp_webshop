@@ -16,6 +16,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 from random import randint
 from fpdf import FPDF
+from mailjet_rest import Client as MClient
 
 
 # -- Setting up App --
@@ -23,6 +24,12 @@ from fpdf import FPDF
 app = Flask(__name__)
 app.secret_key = "any random string"
 app.config['SECRET_KEY'] = 'something-secret2'
+
+# -- Setting up Mailjet --
+
+api_key = '3eee713a034928c6b8c4642e43096140'
+api_secret = '85bbed691accdfb742942aaadca82b8e'
+mailjet = MClient(auth=(api_key, api_secret), version='v3.1')
 
 
 # -- Setting up Mollie
@@ -40,6 +47,35 @@ c = conn.cursor()
 startdate  = datetime.datetime(2019, 6, 20)
 
 PaymentStarted = False
+
+
+# -- TESTING MAILJET _ TEMP --
+
+data = {
+  'Messages': [
+    {
+      "From": {
+        "Email": "info@alexicoo.nl",
+        "Name": "Alex"
+      },
+      "To": [
+        {
+          "Email": "info@alexicoo.nl",
+          "Name": "Alex"
+        }
+      ],
+      "Subject": "Greetings from Mailjet.",
+      "TextPart": "My first Mailjet email",
+      "HTMLPart": "<h3>Dear passenger 1, welcome to <a href='https://www.mailjet.com/'>Mailjet</a>!</h3><br />May the delivery force be with you!",
+      "CustomID": "AppGettingStartedTest"
+    }
+  ]
+}
+result = mailjet.send.create(data=data)
+print("*** status_code: ",result.status_code)
+print("*** result: ",result.json())
+
+
 
 #---------DATABASE STUFF-----------
 #c.execute("DROP TABLE Tickets;")
@@ -1245,8 +1281,9 @@ def GenerateTickets(method):
 
 
             ctrl = randint(1111, 9999)
+            rnd = randint(0000, 9999)
 
-            ticketNr = "KKFF2020-" + str(customerID) + "-" + str(orderID) + "-" + str(counter)
+            ticketNr = "KKFF2020-" + str(customerID) + "-" + str(orderID) + "-" + str(counter) + "-" + str(rnd);
             TicketTypeID = key
             DateTime = 0
             c.execute("INSERT INTO Tickets (TicketNummer, OrderID, TicketTypeID, CustomerName, Scanned, ScanDate, Ctrl) values (?, ?, ?, ?, ?, ? ,?)",(ticketNr, orderID, TicketTypeID, CustomerName, 'False' , DateTime , ctrl))
@@ -1315,6 +1352,34 @@ De festival-organisatie.
                 part.add_header('Content-Disposition',"attachment; filename= "+filename)
                 msg.attach(part)
 
+    data = {
+  'Messages': [
+        {
+        "From": {
+        "Email": "KuylKampTicketService@gmail.com",
+        "Name": "KuylKampTicketService"
+        },
+        "To": [
+        {
+          "Email": "info@alexicoo.nl",
+          "Name": email_send
+        }
+        ],
+        "Subject": 'Tickets KuylKamp Familiefestival',
+        "TextPart": body,
+        "HTMLPart": "<h3>test!</h3>",
+        "CustomID": "AppTest"
+        }
+        ]
+    }
+    result = mailjet.send.create(data=data)
+    print(result.status_code)
+    print(result.json())
+
+
+
+    '''
+
     text = msg.as_string()
     #server = smtplib.SMTP('smtp.gmail.com',587)
     server = smtplib.SMTP('smtp.gmail.com', 465)
@@ -1323,7 +1388,7 @@ De festival-organisatie.
 
 
     server.sendmail(email_user,email_send,text)
-    server.quit()
+    server.quit() '''
 
     session['orderstatus'] = 'Empty'
     PaymentStarted = False
@@ -1350,4 +1415,17 @@ def ShowMessage(method):
 
     session['orderstatus'] = 'Empty'
     return
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
