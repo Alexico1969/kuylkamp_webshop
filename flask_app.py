@@ -49,33 +49,6 @@ startdate  = datetime.datetime(2019, 6, 20)
 PaymentStarted = False
 
 
-# -- TESTING MAILJET _ TEMP --
-
-data = {
-  'Messages': [
-    {
-      "From": {
-        "Email": "info@alexicoo.nl",
-        "Name": "Alex"
-      },
-      "To": [
-        {
-          "Email": "info@alexicoo.nl",
-          "Name": "Alex"
-        }
-      ],
-      "Subject": "Greetings from Mailjet.",
-      "TextPart": "My first Mailjet email",
-      "HTMLPart": "<h3>Dear passenger 1, welcome to <a href='https://www.mailjet.com/'>Mailjet</a>!</h3><br />May the delivery force be with you!",
-      "CustomID": "AppGettingStartedTest"
-    }
-  ]
-}
-result = mailjet.send.create(data=data)
-print("*** status_code: ",result.status_code)
-print("*** result: ",result.json())
-
-
 
 #---------DATABASE STUFF-----------
 #c.execute("DROP TABLE Tickets;")
@@ -1327,14 +1300,14 @@ def GenerateTickets(method):
             msg['To'] = email_send
             msg['Subject'] = subject
 
-            body = 'Beste ' + CustomerName + ","
+            body = 'Beste ' + CustomerName + ",<br>"
             body +=  """
 
-Hierbij ontvang je de door jou bestelde tickets voor het KuylKamp Familiefestival.
-Graag deze tickets uitprinten en meebrengen naar het Festival.
-Veel plezier op het festival !
-
-De festival-organisatie.
+<p>Hierbij ontvang je de door jou bestelde tickets voor het KuylKamp Familiefestival.
+Graag deze tickets uitprinten en meebrengen naar het Festival.</p>
+<p>Veel plezier op het festival !</p>
+<br/>
+<p>De festival-organisatie.</p>
 
             """
 
@@ -1352,6 +1325,8 @@ De festival-organisatie.
                 part.add_header('Content-Disposition',"attachment; filename= "+filename)
                 msg.attach(part)
 
+            f = filename
+
     data = {
   'Messages': [
         {
@@ -1361,20 +1336,24 @@ De festival-organisatie.
         },
         "To": [
         {
-          "Email": "info@alexicoo.nl",
-          "Name": email_send
+          "Email": email_send,
+          "Name": CustomerName
         }
         ],
         "Subject": 'Tickets KuylKamp Familiefestival',
-        "TextPart": body,
-        "HTMLPart": "<h3>test!</h3>",
-        "CustomID": "AppTest"
-        }
-        ]
-    }
+        "TextPart": "",
+        "HTMLPart": body,
+        "CustomID": "TicketApp",
+        "Attachments" : [{
+            'ContentType' : "application/pdf",
+            'Filename' : f,
+            'Base64Content' :  "$pdfBase64" 
+
+        }]
+    }] }
     result = mailjet.send.create(data=data)
-    print(result.status_code)
-    print(result.json())
+    print("Actual ticket mail : ", result.status_code)
+    print("Actual ticket mail (result): ", result.json())
 
 
 
