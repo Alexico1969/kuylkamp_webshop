@@ -1,37 +1,25 @@
 # -*- coding: utf-8 -*-
-from flask import Flask, flash, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for
 import sqlite3
 import datetime
 import os
 import glob
 import smtplib
-import csv
-import qrcode
 from helpers import makeTicket
 from os import path
 from MolliePy.mollie.api.client import Client
 from MolliePy.mollie.api.error import Error
 from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from random import randint
-from fpdf import FPDF
-from mailjet_rest import Client as MClient
-
 
 # -- Setting up App --
 
 app = Flask(__name__)
 app.secret_key = "any random string"
 app.config['SECRET_KEY'] = 'something-secret2'
-
-# -- Setting up Mailjet --
-
-api_key = '3eee713a034928c6b8c4642e43096140'
-api_secret = '85bbed691accdfb742942aaadca82b8e'
-mailjet = MClient(auth=(api_key, api_secret), version='v3.1')
 
 
 # -- Setting up Mollie
@@ -46,11 +34,8 @@ mollie_client.set_api_key('live_vP5pmxwcMWN3RENK3P7SfUupT9ghej') # LIVEKEY
 ROOT = path.dirname(path.realpath(__file__))
 conn = sqlite3.connect(path.join(ROOT,"kkff.db"))
 c = conn.cursor()
-startdate  = datetime.datetime(2019, 6, 20)
 
 PaymentStarted = False
-
-
 
 #---------DATABASE STUFF-----------
 #c.execute("DROP TABLE Tickets;")
@@ -63,13 +48,9 @@ PaymentStarted = False
 #c.execute("CREATE TABLE IF NOT EXISTS Tickets( TicketID INTEGER PRIMARY KEY AUTOINCREMENT, TicketNummer TEXT NOT NULL UNIQUE, OrderID INT NOT NULL, TicketTypeID INT NOT NULL, CustomerName TEXT NOT NULL, Scanned BOOLEAN NOT NULL, ScanDate TEXT, Ctrl INT NOT NULL,FOREIGN KEY(OrderID) REFERENCES TicketOrders(OrderID) ,FOREIGN KEY(TicketTypeID) REFERENCES OfferedTickets(TicketTypeID));")
 #c.execute("INSERT INTO OfferedTickets (TicketTypeID, TicketName, TicketPrice) values (? , ?, ?)",(7 , 'Zaterdagavond', 20.0))
 #conn.commit()
-#c.execute("CREATE TABLE IF NOT EXISTS PeopleList(Name TEXT NOT NULL);")
+#c.execute("UPDATE OfferedTickets SET TicketName = 'Tiener (13-17 jaar)' WHERE TicketTypeID = 15")
 #conn.commit()
-#c.execute("UPDATE OfferedTickets SET TicketName = 'Kind (4-12 jaar)' WHERE TicketTypeID = 13")
-#conn.commit()
-#c.execute("UPDATE Tickets SET ScanDate = '0' WHERE TicketID = 19")
-#conn.commit()
-#c.execute("UPDATE Tickets SET Scanned = 'False' WHERE TicketID = 19")
+#c.execute("UPDATE OfferedTickets SET TicketName = 'Tiener - Weekend' WHERE TicketTypeID = 16")
 #conn.commit()
 #----------------------------------
 
@@ -143,8 +124,6 @@ def main():
         InitiatePayment('GET')
         PaymentStarted = True
 
-    #session['rows'] = rows
-
     return render_template( renderPage[session['orderstatus']], rows = rows, bericht = bericht, totalAmount = totalAmount )
 
 
@@ -205,10 +184,7 @@ def addTicketType():
             c.execute("SELECT * FROM OfferedTickets")
             conn.commit()
 
-    bericht = ""
 
-    CreatePDF(rows)
-    createCSV(rows)
 
     return render_template('addTicketType.html', rows=rows , bericht = bericht)
 
@@ -222,7 +198,7 @@ def showCustomers():
     if not(login_required()):
         return redirect("/login")
 
-    c.execute("SELECT * FROM CustomerInfo ORDER BY CustomerID DESC")
+    c.execute("SELECT * FROM CustomerInfo")
     conn.commit()
 
     rows=c.fetchall()
@@ -239,12 +215,9 @@ def showCustomers():
 
             c.execute("DELETE FROM CustomerInfo WHERE CustomerID = %s " % record)
             conn.commit()
-            c.execute("SELECT * FROM CustomerInfo ORDER BY CustomerID DESC")
+            c.execute("SELECT * FROM CustomerInfo")
             conn.commit()
             rows=c.fetchall()
-
-    CreatePDF(rows)
-    createCSV(rows)
 
     return render_template('showCustomers.html', rows=rows , bericht = bericht)
 
@@ -257,7 +230,7 @@ def showTickets():
     if not(login_required()):
         return redirect("/login")
 
-    c.execute("SELECT * FROM Tickets ORDER BY TicketID DESC")
+    c.execute("SELECT * FROM Tickets")
     conn.commit()
 
     rows=c.fetchall()
@@ -274,25 +247,9 @@ def showTickets():
 
             c.execute("DELETE FROM Tickets WHERE TicketID = %s " % record)
             conn.commit()
-            c.execute("SELECT * FROM Tickets ORDER BY TicketID DESC")
+            c.execute("SELECT * FROM Tickets")
             conn.commit()
             rows=c.fetchall()
-
-        if actie == "Res":
-            record = request.form.get("action")
-            record = int(record.split()[2]) # splits "Delete 2"
-            bericht = "Record "+ str(record) + " is reset"
-            DateTime = 0
-            c.execute("UPDATE Tickets SET Scanned = 'False' WHERE TicketID = %s" % record )
-            conn.commit()
-            c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE TicketID ==:pv1", {"pv0":DateTime, "pv1":record})
-            conn.commit()
-            rows=c.fetchall()
-
-    #session['rows'] = rows
-
-    CreatePDF(rows)
-    createCSV(rows)
 
     return render_template('showTickets.html', rows=rows , bericht = bericht)
 
@@ -304,7 +261,7 @@ def showOrders():
     if not(login_required()):
         return redirect("/login")
 
-    c.execute("SELECT * FROM TicketOrders ORDER BY OrderID DESC")
+    c.execute("SELECT * FROM TicketOrders")
     conn.commit()
 
     rows=c.fetchall()
@@ -321,15 +278,9 @@ def showOrders():
 
             c.execute("DELETE FROM TicketOrders WHERE OrderID = %s " % record)
             conn.commit()
-            c.execute("SELECT * FROM TicketOrders ORDER BY OrderID DESC")
+            c.execute("SELECT * FROM TicketOrders")
             conn.commit()
             rows=c.fetchall()
-            rows.sort(reverse=True)
-
-    #session['rows'] = rows
-
-    CreatePDF(rows)
-    createCSV(rows)
 
     return render_template('showOrders.html', rows=rows , bericht = bericht)
 
@@ -496,7 +447,7 @@ def riet():
     if request.method  == 'POST':
         code = request.form['code']
         if str(code) == '1591':
-            session['molliekey'] = 'test_9Q9RUAA2xbT7CtTvBdS7WerNGwTV88'
+            mollie_client.set_api_key('test_9Q9RUAA2xbT7CtTvBdS7WerNGwTV88')
             session['user']="Riet"
             return redirect("/")
         else:
@@ -595,37 +546,19 @@ def bezoekers():
 @app.route('/scanTicket', methods=["POST","GET"])
 def scanTicket():
 
-    d1 = datetime.datetime.now()
-    d2 = startdate
 
 
-    if d1<d2:
-        bericht = "Het festival is nog niet begonnen !"
-        site = "message.html"
-        return render_template(site , bericht = bericht)
+    TicketID = int(request.args.get('ticketID'))
+    CtrlScan = int(request.args.get('ctrl'))
 
-
-
-    try:
-        TicketID = int(request.args.get('ticketID'))
-        CtrlScan = int(request.args.get('ctrl'))
-    except:
-        site = "message.html"
-        bericht = "Scan - error"
-        return render_template(site , bericht = bericht)
 
     c.execute("SELECT * FROM Tickets WHERE TicketID =%s" % TicketID)
     conn.commit()
 
     rows = c.fetchall()
 
-
-    try:
-        state = rows[0][5]
-        ctrl = rows[0][7]
-    except:
-        site = "NOTOK.html"
-        return render_template(site , CustomerName = "No such Ticket")
+    state = rows[0][5]
+    ctrl = rows[0][7]
 
     if state == "False":
         if CtrlScan == ctrl:
@@ -635,19 +568,15 @@ def scanTicket():
             DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
             c.execute("UPDATE Tickets SET Scanned = 'True' WHERE TicketID = %s" % TicketID )
             conn.commit()
+            #c.execute("UPDATE Tickets SET ScanDate = %s WHERE TicketID = %s" % (DateTime, TicketID) )
             c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE TicketID ==:pv1", {"pv0":DateTime, "pv1":TicketID})
             conn.commit()
-            if rows[0][3] == 17:
-                site="ThanksForDonation.html"
-                name="Bedankt voor uw donatie - Dit is echter geen ticket !"
         else:
             site = "NOTOK.html"
             name = "bad ctrl"
     else:
         site = "NOTOK.html"
         name = rows[0][6]  #DateScanned
-
-
 
     return render_template(site , CustomerName = name)
 
@@ -661,216 +590,41 @@ def acceptByOrderNr():
 
     if request.method == 'POST':
 
-        TicketID_input = int(request.form['OrderNr'])
-        session['OrderID'] = TicketID_input
-        c.execute("SELECT * FROM Tickets WHERE OrderID = %s " % TicketID_input )
-        conn.commit()
-        rows=c.fetchall()
+        print('TODO - POST');
+        return render_template('acceptedByOrderNr.html')
 
-        return render_template('acceptedByOrderNrShowTickets.html' , rows=rows, bericht = "acceptByOrderNr")
+        '''c.execute("SELECT * FROM Tickets WHERE TicketID =%s" % TicketID)
+        conn.commit()
+
+        rows = c.fetchall()
+
+        state = rows[0][5]
+        ctrl = rows[0][7]
+
+        if state == "False":
+            if CtrlScan == ctrl:
+                site = "OK.html"
+                name = rows[0][4]  #CustomerName
+                now = datetime.datetime.now()
+                DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
+                c.execute("UPDATE Tickets SET Scanned = 'True' WHERE TicketID = %s" % TicketID )
+                conn.commit()
+                #c.execute("UPDATE Tickets SET ScanDate = %s WHERE TicketID = %s" % (DateTime, TicketID) )
+                c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE TicketID ==:pv1", {"pv0":DateTime, "pv1":TicketID})
+                conn.commit()
+            else:
+                site = "NOTOK.html"
+                name = "bad ctrl"
+        else:
+            site = "NOTOK.html"
+            name = rows[0][6]  #DateScanned'''
 
     else:
         return render_template('acceptByOrderNr.html')
 
-@app.route('/acceptBO', methods=["POST","GET"])   # accept bij Order Nr.
-def acceptBO():
 
-    if not(login_required()):
-        return redirect("/login")
 
-    session['user'] = "Admin"
 
-    if request.method == 'POST':
-
-        try:
-            temp = request.form['OBON']
-        except:
-            bericht = "Deze pagina is niet rechtstreeks benaderbaar !";
-            return render_template( 'message.html',bericht = bericht )
-
-
-        orderID = session['OrderID']
-
-        c.execute("UPDATE Tickets SET Scanned = 'True' WHERE OrderID = %s" % orderID)
-        conn.commit()
-
-        now = datetime.datetime.now()
-        DateTime = str(now.strftime("%Y-%m-%d %H:%M"))
-        c.execute("UPDATE Tickets SET ScanDate ==:pv0 WHERE OrderID ==:pv1", {"pv0":DateTime, "pv1":orderID})
-        conn.commit()
-
-        c.execute("SELECT * FROM Tickets WHERE OrderID = %s " % orderID )
-        conn.commit()
-        rows=c.fetchall()
-
-
-
-        return render_template('acceptedByOrderNrShowTickets.html' , rows=rows, bericht = "acceptByOrderNr")
-
-@app.route('/listWT', methods=["POST","GET"])  #list weekend-tickets
-def listWT():
-
-    if not(login_required()):
-        return redirect("/login")
-
-    session['user'] = "Admin"
-
-    c.execute("SELECT * FROM Tickets WHERE TicketTypeID ='2' ")
-
-    conn.commit()
-    rows=c.fetchall()
-
-    CreatePDF(rows)
-    createCSV(rows)
-
-    return render_template('listWeekendTickets.html' , rows=rows, bericht = bericht)
-
-
-@app.route('/peoplelist',methods=["POST","GET"])  #display list of ski jumpers
-def peoplelist():
-    rows=""
-    bericht=""
-
-    c.execute("SELECT CustomerName FROM Tickets WHERE Scanned = 'True' ORDER BY ScanDate DESC LIMIT 10;")
-    conn.commit()
-    temprows = c.fetchall()
-
-    rows = []
-
-    for row in temprows:
-            rows += row
-
-    rows = list(dict.fromkeys(rows))
-
-    CreatePDF(rows)
-    createCSV(rows)
-
-    return render_template('peoplelist.html' , rows=rows, bericht = rows)
-
-
-@app.route('/MakePDF', methods=["GET"])
-def MakePDFList():
-
-    if not(login_required()):
-        return redirect("/login")
-
-    session['user'] = "Admin"
-
-    return render_template('showPDF.html')
-
-
-def CreatePDF(rows):
-
-    if not(login_required()):
-        return redirect("/login")
-
-    session['user'] = "Admin"
-
-    dt = str(datetime.datetime.now())
-
-    # Create PDF
-    pdf = FPDF()
-    pdf.add_page(orientation = 'L')
-    pdf.set_font('Arial', 'B', 10)
-    pdf.write(5, 'Rows : ')
-    pdf.ln(h = '')
-
-    for row in rows:
-        pdf.write(5, str(row))
-        pdf.write(5,',')
-        pdf.ln(h = '')
-
-    pdf.output('tuto1.pdf', 'F')
-
-
-    #pdf_filename =  dt + ".pdf"
-    pdf_filename =  "output.pdf"
-
-    pdf.output( "mysite/PDF/" + pdf_filename, 'F')
-
-    return
-
-
-def createCSV(rows):
-
-    ofile  = open('mysite/PDF/rows.csv', "wt")
-    writer = csv.writer(ofile, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
-
-    for row in rows:
-        writer.writerow(row)
-
-    ofile.close()
-
-    return
-
-@app.route('/ShowStats', methods=["GET"])
-def ShowStats():
-
-    if not(login_required()):
-        return redirect("/login")
-
-    session['user'] = "Admin"
-
-    c.execute("SELECT * FROM Tickets;")
-    conn.commit()
-    temprows = c.fetchall()
-
-    rows = {}
-    counter = 0
-    weekendCounter = 0
-    vrijdagCounter = 0
-    zaterdagCounter = 0
-    zondagCounter = 0
-    zamiCounter = 0
-    kindCounter = 0
-    kindWeekendCounter = 0
-    tienerCounter = 0
-    tienerWeekendCounter = 0
-    donatieCounter = 0
-
-
-    for row in temprows:
-        counter += 1
-        ticket = row[3]
-        if ticket == 2:
-            weekendCounter += 1
-        if ticket == 5:
-            vrijdagCounter += 1
-        if ticket == 6:
-            zamiCounter += 1
-        if ticket == 10:
-            zaterdagCounter += 1
-        if ticket == 11:
-            zondagCounter += 1
-        if ticket == 13:
-            kindCounter += 1
-        if ticket == 14:
-            kindWeekendCounter += 1
-        if ticket == 15:
-            tienerCounter += 1
-        if ticket == 16:
-            tienerWeekendCounter += 1
-        if ticket == 17:
-            donatieCounter += 1
-
-
-
-    rows["TotaalTickets"] = counter
-    rows["WeekendCounter"] = weekendCounter
-    rows["VrijdagCounter"] = vrijdagCounter
-    rows["ZaterdagCounter"] = zaterdagCounter
-    rows["ZamiCounter"] = zamiCounter
-    rows["ZondagCounter"] = zondagCounter
-    rows["KindCounter"] = kindCounter
-    rows["KindWeekendCounter"] = kindWeekendCounter
-    rows["TienerCounter"] = tienerCounter
-    rows["TienerWeekendCounter"] = tienerWeekendCounter
-    rows["DonatieCounter"] = donatieCounter
-
-
-
-
-    return render_template('ShowStats.html', rows = rows)
 
 
 #------------------------------- FUNCTIONS BASED ON ORDERSTATUS -----------------------------------------
@@ -1051,11 +805,7 @@ def InitiatePayment(method):
         session['orderstatus'] = message
         return
     elif (session['user'] == "Admin" or session['user'] == "Riet"):
-        flash('User : ' + session['user'])
-        if session.get("molliekey"):
-            mollie_client.set_api_key(session['molliekey'])
-        else:
-            mollie_client.set_api_key('live_vP5pmxwcMWN3RENK3P7SfUupT9ghej')
+        mollie_client.set_api_key('test_9Q9RUAA2xbT7CtTvBdS7WerNGwTV88')
     elif session['user'] != "customer":
         bericht = "SESSION - ERROR - User: " + str(session['user'])
         session['orderstatus'] = "message"
@@ -1136,13 +886,7 @@ def returnFromMollie():
         bericht = "No MollieID"
         return render_template( 'message.html', bericht = bericht )
 
-    try:
-        payment = mollie_client.payments.get(pay_ID)
-    except:
-        bericht = "Mollie Key Error"
-        return render_template( 'message.html', bericht = bericht )
-
-    mollie_client.set_api_key('live_vP5pmxwcMWN3RENK3P7SfUupT9ghej')
+    payment = mollie_client.payments.get(pay_ID)
 
     if payment.is_paid():
 
@@ -1253,10 +997,11 @@ def GenerateTickets(method):
     for key in order:
         for t in range(order[key]):
 
-            ctrl = randint(1111, 9999)
-            rnd = randint(0000, 9999)
 
-            ticketNr = "KKFF2020-" + str(customerID) + "-" + str(orderID) + "-" + str(counter) + "-" + str(rnd);
+
+            ctrl = randint(1111, 9999)
+
+            ticketNr = "KKFF2019-" + str(customerID) + "-" + str(orderID) + "-" + str(counter)
             TicketTypeID = key
             DateTime = 0
             c.execute("INSERT INTO Tickets (TicketNummer, OrderID, TicketTypeID, CustomerName, Scanned, ScanDate, Ctrl) values (?, ?, ?, ?, ?, ? ,?)",(ticketNr, orderID, TicketTypeID, CustomerName, 'False' , DateTime , ctrl))
@@ -1295,121 +1040,44 @@ def GenerateTickets(method):
 
             subject = 'Tickets KuylKamp Familiefestival'
 
-            msg = MIMEMultipart('mixed')
+            msg = MIMEMultipart()
             msg['From'] = email_user
             msg['To'] = email_send
             msg['Subject'] = subject
 
-            body = '<img src=\"mysite/img/LOGO.jpg\">' + 'Beste ' + CustomerName + ",<br>"
+            body = 'Beste ' + CustomerName + ","
             body +=  """
 
-<p>Hierbij ontvang je de door jou bestelde tickets voor het KuylKamp Familiefestival.
-Graag deze tickets uitprinten en meebrengen naar het Festival.</p>
-<img src=\"cid:id1\">
-<p>Veel plezier op het festival !</p>
-<br/>
-<p>De festival-organisatie.</p>
-<img src=&#8243;https://www.pngonly.com/wp-content/uploads/2017/05/Monkey-Tired-PNG-2.png&#8243;><br>
+Hierbij ontvang je de door jou bestelde tickets voor het KuylKamp Familiefestival.
+Graag deze tickets uitprinten en meebrengen naar het Festival.
+Veel plezier op het festival !
 
+De festival-organisatie.
 
             """
 
-            body += "<p>OrderID: " + str(orderID) + "<p>"
+            body += "OrderID: " + str(orderID)
 
-            msg.attach(MIMEText(body,'html'))
+            msg.attach(MIMEText(body,'plain'))
 
             for att in ticketbatch:
-
-                global ks
-
-                ks = TicketType
-
-                qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=12, border=4, )
-
-                QR_string = 'http://kkff.pythonanywhere.com/scanTicket?ticketID=' + str(ticketID) + '&ctrl=' + str(ctrl)
-
-                qr.add_data(QR_string)
-                qr.make(fit=True)
-
-                img = qr.make_image(fill_color="black", back_color="white")
-
-                filename_QR = "QR-temp.png"
-
-                img.save(filename_QR)
-
-
                 filename= "/home/kkff/mysite/" + att
                 attachment  =open(filename,'rb')
 
                 part = MIMEBase('application','octet-stream')
                 part.set_payload((attachment).read())
                 encoders.encode_base64(part)
-
                 part.add_header('Content-Disposition',"attachment; filename= "+filename)
                 msg.attach(part)
 
-                #body += "<img src='QR-temp.png'><br>'
-                body += "<img src=mysite/img/LOGO.jpg><br>"
-                
-            f = filename
-
-    data = {
-  'Messages': [
-        {
-        "From": {
-        "Email": "KuylKampTicketService@gmail.com",
-        "Name": "KuylKampTicketService"
-        },
-        "To": [
-        {
-          "Email": email_send,
-          "Name": CustomerName
-        }
-        ],
-        "Subject": 'Tickets KuylKamp Familiefestival',
-        "TextPart": "Test-001",
-        "HTMLPart": body,
-        "CustomID": "TicketApp",
-        "Attachments" : [{
-            'ContentType' : "application/pdf",
-            'Filename' : f,
-            'Base64Content' :  "$pdfBase64" 
-
-        },
-
-        {
-            'ContentType' : "html",
-            'Filename' : "mysite/img/text.html",
-            'Base64Content' :  "VGhpcyBpcyB5b3VyIGF0dGFjaGVkIGZpbGUhISEK" 
-        },
-        {
-            'ContentType' : "text/plain",
-            'Filename' : "mysite/img/text.txt",
-            'Base64Content' :  "RGl0IGlzIHdlZXIgZWVuIHRlc3Q=" 
-        },
-        {
-            'ContentType' : "image/jpg",
-            'Filename' : "mysite/img/LOGO.jpg",
-            'Base64Content' :  "iVBORw0KGgoAAAANSUhEUgAAABQAAAALCAYAAAB/Ca1DAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAB3RJTUUH4wIIChcxurq5eQAAAAd0RVh0QXV0aG9yAKmuzEgAAAAMdEVYdERlc2NyaXB0aW9uABMJISMAAAAKdEVYdENvcHlyaWdodACsD8w6AAAADnRFWHRDcmVhdGlvbiB0aW1lADX3DwkAAAAJdEVYdFNvZnR3YXJlAF1w/zoAAAALdEVYdERpc2NsYWltZXIAt8C0jwAAAAh0RVh0V2FybmluZwDAG+aHAAAAB3RFWHRTb3VyY2UA9f+D6wAAAAh0RVh0Q29tbWVudAD2zJa/AAAABnRFWHRUaXRsZQCo7tInAAABV0lEQVQokaXSPWtTYRTA8d9N7k1zm6a+RG2x+FItgpu66uDQxbFurrr5OQQHR9FZnARB3PwSFqooddAStCBoqmLtS9omx+ESUXuDon94tnP+5+1JYm057GyQjZFP+l+S6G2FzlNe3WHtHc2TNI8zOlUUGLxsD1kDyR+EEQE2P/L8Jm/uk6RUc6oZaYM0JxtnpEX9AGPTtM6w7yzVEb61EaSNn4QD3j5m4QabH6hkVFLSUeqHyCeot0ib6BdNVGscPM/hWWr7S4Tw9TUvbpFUitHTnF6XrS+sL7O6VBSausT0FZonSkb+nZUFFm+z8Z5up5Btr1Lby7E5Zq4yPrMrLR263ZV52g+LvfW3iy6PXubUNVrnhqYNF3bmiZ1i1MmLnL7OxIWh4T+IMpYeRNyrRzyZjWg/ioh+aVgZu4WfXxaixbsRve5fiwb8epTo8+kZjSPFf/sHvgNC0/mbjJbxPAAAAABJRU5ErkJggg=="
-        }]
-    }] }
-    result = mailjet.send.create(data=data)
-    print("Actual ticket mail : ", result.status_code)
-    print("Actual ticket mail (result): ", result.json())
-
-
-
-    '''
-
     text = msg.as_string()
-    #server = smtplib.SMTP('smtp.gmail.com',587)
-    server = smtplib.SMTP('smtp.gmail.com', 465)
+    server = smtplib.SMTP('smtp.gmail.com',587)
     server.starttls()
     server.login(email_user,email_password)
 
 
     server.sendmail(email_user,email_send,text)
-    server.quit() '''
+    server.quit()
 
     session['orderstatus'] = 'Empty'
     PaymentStarted = False
@@ -1436,15 +1104,3 @@ def ShowMessage(method):
 
     session['orderstatus'] = 'Empty'
     return
-
-
-
-
-
-
-
-
-
-
-
-
