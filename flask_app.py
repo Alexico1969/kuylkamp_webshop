@@ -6,11 +6,13 @@ import os
 import glob
 import smtplib
 import csv
+import qrcode
 from helpers import makeTicket
 from os import path
 from MolliePy.mollie.api.client import Client
 from MolliePy.mollie.api.error import Error
 from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
@@ -1251,8 +1253,6 @@ def GenerateTickets(method):
     for key in order:
         for t in range(order[key]):
 
-
-
             ctrl = randint(1111, 9999)
             rnd = randint(0000, 9999)
 
@@ -1295,36 +1295,62 @@ def GenerateTickets(method):
 
             subject = 'Tickets KuylKamp Familiefestival'
 
-            msg = MIMEMultipart()
+            msg = MIMEMultipart('mixed')
             msg['From'] = email_user
             msg['To'] = email_send
             msg['Subject'] = subject
 
-            body = 'Beste ' + CustomerName + ",<br>"
+            body = '<img src=\"mysite/img/LOGO.jpg\">' + 'Beste ' + CustomerName + ",<br>"
             body +=  """
 
 <p>Hierbij ontvang je de door jou bestelde tickets voor het KuylKamp Familiefestival.
 Graag deze tickets uitprinten en meebrengen naar het Festival.</p>
+<img src=\"cid:id1\">
 <p>Veel plezier op het festival !</p>
 <br/>
 <p>De festival-organisatie.</p>
+<img src=&#8243;https://www.pngonly.com/wp-content/uploads/2017/05/Monkey-Tired-PNG-2.png&#8243;><br>
+
 
             """
 
-            body += "OrderID: " + str(orderID)
+            body += "<p>OrderID: " + str(orderID) + "<p>"
 
-            msg.attach(MIMEText(body,'plain'))
+            msg.attach(MIMEText(body,'html'))
 
             for att in ticketbatch:
+
+                global ks
+
+                ks = TicketType
+
+                qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=12, border=4, )
+
+                QR_string = 'http://kkff.pythonanywhere.com/scanTicket?ticketID=' + str(ticketID) + '&ctrl=' + str(ctrl)
+
+                qr.add_data(QR_string)
+                qr.make(fit=True)
+
+                img = qr.make_image(fill_color="black", back_color="white")
+
+                filename_QR = "QR-temp.png"
+
+                img.save(filename_QR)
+
+
                 filename= "/home/kkff/mysite/" + att
                 attachment  =open(filename,'rb')
 
                 part = MIMEBase('application','octet-stream')
                 part.set_payload((attachment).read())
                 encoders.encode_base64(part)
+
                 part.add_header('Content-Disposition',"attachment; filename= "+filename)
                 msg.attach(part)
 
+                #body += "<img src='QR-temp.png'><br>'
+                body += "<img src=mysite/img/LOGO.jpg><br>"
+                
             f = filename
 
     data = {
@@ -1341,7 +1367,7 @@ Graag deze tickets uitprinten en meebrengen naar het Festival.</p>
         }
         ],
         "Subject": 'Tickets KuylKamp Familiefestival',
-        "TextPart": "",
+        "TextPart": "Test-001",
         "HTMLPart": body,
         "CustomID": "TicketApp",
         "Attachments" : [{
@@ -1349,6 +1375,22 @@ Graag deze tickets uitprinten en meebrengen naar het Festival.</p>
             'Filename' : f,
             'Base64Content' :  "$pdfBase64" 
 
+        },
+
+        {
+            'ContentType' : "html",
+            'Filename' : "mysite/img/text.html",
+            'Base64Content' :  "VGhpcyBpcyB5b3VyIGF0dGFjaGVkIGZpbGUhISEK" 
+        },
+        {
+            'ContentType' : "text/plain",
+            'Filename' : "mysite/img/text.txt",
+            'Base64Content' :  "RGl0IGlzIHdlZXIgZWVuIHRlc3Q=" 
+        },
+        {
+            'ContentType' : "image/jpg",
+            'Filename' : "mysite/img/LOGO.jpg",
+            'Base64Content' :  "iVBORw0KGgoAAAANSUhEUgAAABQAAAALCAYAAAB/Ca1DAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAB3RJTUUH4wIIChcxurq5eQAAAAd0RVh0QXV0aG9yAKmuzEgAAAAMdEVYdERlc2NyaXB0aW9uABMJISMAAAAKdEVYdENvcHlyaWdodACsD8w6AAAADnRFWHRDcmVhdGlvbiB0aW1lADX3DwkAAAAJdEVYdFNvZnR3YXJlAF1w/zoAAAALdEVYdERpc2NsYWltZXIAt8C0jwAAAAh0RVh0V2FybmluZwDAG+aHAAAAB3RFWHRTb3VyY2UA9f+D6wAAAAh0RVh0Q29tbWVudAD2zJa/AAAABnRFWHRUaXRsZQCo7tInAAABV0lEQVQokaXSPWtTYRTA8d9N7k1zm6a+RG2x+FItgpu66uDQxbFurrr5OQQHR9FZnARB3PwSFqooddAStCBoqmLtS9omx+ESUXuDon94tnP+5+1JYm057GyQjZFP+l+S6G2FzlNe3WHtHc2TNI8zOlUUGLxsD1kDyR+EEQE2P/L8Jm/uk6RUc6oZaYM0JxtnpEX9AGPTtM6w7yzVEb61EaSNn4QD3j5m4QabH6hkVFLSUeqHyCeot0ib6BdNVGscPM/hWWr7S4Tw9TUvbpFUitHTnF6XrS+sL7O6VBSausT0FZonSkb+nZUFFm+z8Z5up5Btr1Lby7E5Zq4yPrMrLR263ZV52g+LvfW3iy6PXubUNVrnhqYNF3bmiZ1i1MmLnL7OxIWh4T+IMpYeRNyrRzyZjWg/ioh+aVgZu4WfXxaixbsRve5fiwb8epTo8+kZjSPFf/sHvgNC0/mbjJbxPAAAAABJRU5ErkJggg=="
         }]
     }] }
     result = mailjet.send.create(data=data)
@@ -1394,8 +1436,6 @@ def ShowMessage(method):
 
     session['orderstatus'] = 'Empty'
     return
-
-
 
 
 
