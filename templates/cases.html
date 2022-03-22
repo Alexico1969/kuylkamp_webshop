@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Cases{% endblock %}
+{% block head %}
+    {{ super() }}
+    <style type="text/css">
+        .important { color: #336699; }
+    </style>
+{% endblock %}
+{% block content %}
+    <h1>Cases</h1>
+
+    <div class="flexbox">
+        
+        <div class="left-panel">
+            <form action="" method="post">
+            <button type="submit" name="action" value="all" class="btn btn-primary">sorted</button>
+            <button type="submit" name="action" value="open" class="btn btn-info">open</button><br/><br/>
+            {% for student,date in students.items() %}              
+                {% if student == current_student %}
+                    <button type="submit" name="action" value="stud-{{student}}" class="button2">{{date}} - {{student}}</button><br/>
+                {% else %}
+                    <button type="submit" name="action" value="stud-{{student}}" class="button1">{{date}} - {{student}}</button><br/>
+                {% endif %}
+            {% endfor %}
+            </form>
+        </div>
+        <div class="main">
+            <form action="" method="post">
+                <h3>Student : <span class="important">{{current_student}}</span> 
+                    &nbsp&nbsp        
+                    <!--button type="submit" name="action" value="prev" class="btn btn-primary">prev</button>&nbsp
+                    <button type="submit" name="action" value="next" class="btn btn-info">next</button-->
+                </h3>
+                <br/>
+                <table>
+                <tr><th>id</th><th>student</th><th>date</th><th>note</th><th style="min-width: 200px;">status</th><th>Del</th></tr>
+                {% for row in cases %}
+                    <tr> 
+                        <td>{{row.id}}</td>
+                        <td>{{row.student}}</td>
+                        <td>{{row.date}}</td>
+                        <td>{{row.note}}</td>
+                        <td style="min-width: 200px;">{{row.status}}</td>
+                        <td><button type="submit" name="case" value="Del-{{row.id}}">Del</button></td>
+                    </tr>
+                    {% set tempvar = row.status %}
+                {% endfor %}
+                </table>
+                {% if cases[0].status != 'dismissed' %}
+                <br/>
+                Status:
+                <select name="status" required>
+                        <option value="open">Open</option>
+                        <option value="on hold">On hold</option>
+                        <option value="to QA : Contact instructor">To QA : Contact instructor</option>
+                        <option value="[QA]">Label [QA]</option>
+                        <option value="to parent liaison">To parent liaison</option>
+                        <option value="[parent liaison]">Label [parent liaison]</option>
+                        <option value="special">Special</option>
+                </select>
+                <br/><br/>
+                <textarea name="note" rows="8" cols="150">Note</textarea>
+                <br/><br/>
+                <button type="submit" name="action" value="save" class="btn btn-success">Save note and status</button><br/><br/>
+                <button type="submit" name="action" value="dism" class="btn btn-danger">Dismiss this case</button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+{% endblock %}
